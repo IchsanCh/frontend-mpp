@@ -1,0 +1,43 @@
+@import "tailwindcss";
+@plugin "daisyui";
+html {
+  scroll-behavior: smooth;
+}
+@layer utilities {
+  .color1 {
+    color: #ad8b73;
+  }
+  .color2 {
+    color: #ceab93;
+  }
+  .color3 {
+    color: #e3caa5;
+  }
+  .color4 {
+    color: #fffbe9;
+  }
+  .bgcolor1 {
+    background-color: #ad8b73;
+  }
+  .bgcolor2 {
+    background-color: #ceab93;
+  }
+  .bgcolor3 {
+    background-color: #e3caa5;
+  }
+  .bgcolor4 {
+    background-color: #fffbe9;
+  }
+  .borderc1 {
+    border-color: #ad8b73;
+  }
+  .borderc2 {
+    border-color: #ceab93;
+  }
+  .borderc3 {
+    border-color: #e3caa5;
+  }
+  .borderc4 {
+    border-color: #fffbe9;
+  }
+}
