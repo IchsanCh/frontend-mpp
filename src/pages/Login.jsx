@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import logo from "../assets/images/logo.webp";
 import { authService } from "../services/api";
-
+const APP_NAME = import.meta.env.VITE_APP_NAME || "SANDIGI";
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -39,7 +39,7 @@ export default function Login() {
   const handleEmailChange = (e) => {
     const value = e.target.value;
     setEmail(value);
-    setLoginError(""); // Clear login error saat user mengetik
+    setLoginError("");
     if (touched.email) {
       setErrors({ ...errors, email: validateEmail(value) });
     }
@@ -48,7 +48,7 @@ export default function Login() {
   const handlePasswordChange = (e) => {
     const value = e.target.value;
     setPassword(value);
-    setLoginError(""); // Clear login error saat user mengetik
+    setLoginError("");
     if (touched.password) {
       setErrors({ ...errors, password: validatePassword(value) });
     }
@@ -110,11 +110,10 @@ export default function Login() {
                 />
               </div>
               <h2 className="text-2xl font-bold text-base-content">
-                Login MPP Kajen
+                Login {APP_NAME}
               </h2>
             </div>
 
-            {/* Alert error untuk login gagal */}
             {loginError && (
               <div className="alert alert-error mb-4">
                 <AlertCircle className="h-5 w-5" />
@@ -255,7 +254,7 @@ export default function Login() {
 
               <button
                 type="submit"
-                className="btn bgcolor1 hover:bg-white hover:text-black shadow-md hover:shadow-xl transition-all duration-200 text-white w-full gap-2 group"
+                className="btn bg-0 hover:bg-white hover:text-black shadow-md hover:shadow-xl transition-all duration-200 text-white w-full gap-2 group"
                 disabled={isLoading}
               >
                 {isLoading ? (

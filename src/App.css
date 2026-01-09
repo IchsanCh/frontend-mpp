@@ -4,6 +4,9 @@ html {
   scroll-behavior: smooth;
 }
 @layer utilities {
+  .color0 {
+    color: #8c6a4b;
+  }
   .color1 {
     color: #ad8b73;
   }
@@ -15,6 +18,9 @@ html {
   }
   .color4 {
     color: #fffbe9;
+  }
+  .bgcolor0 {
+    background-color: #8c6a4b;
   }
   .bgcolor1 {
     background-color: #ad8b73;
@@ -40,4 +46,74 @@ html {
   .borderc4 {
     border-color: #fffbe9;
   }
+}
+@utility color-0 {
+  color: #8c6a4b;
+}
+
+@utility color-1 {
+  color: #ad8b73;
+}
+
+@utility color-2 {
+  color: #ceab93;
+}
+
+@utility color-3 {
+  color: #e3caa5;
+}
+
+@utility color-4 {
+  color: #fffbe9;
+}
+
+/* ==============================
+   BACKGROUND UTILITIES
+   ============================== */
+@utility bg-0 {
+  background-color: #8c6a4b;
+}
+
+@utility bg-1 {
+  background-color: #ad8b73;
+}
+
+@utility bg-2 {
+  background-color: #ceab93;
+}
+
+@utility bg-3 {
+  background-color: #e3caa5;
+}
+
+@utility bg-4 {
+  background-color: #fffbe9;
+}
+
+/* ==============================
+   BORDER UTILITIES
+   ============================== */
+@utility border-0 {
+  border-color: #8c6a4b;
+}
+
+@utility border-1 {
+  border-color: #ad8b73;
+}
+
+@utility border-2 {
+  border-color: #ceab93;
+}
+
+@utility border-3 {
+  border-color: #e3caa5;
+}
+
+@utility border-4 {
+  border-color: #fffbe9;
+}
+
+@utility step-color-0 {
+  --step-bg: #8c6a4b;
+  --step-fg: #fffbe9;
 }

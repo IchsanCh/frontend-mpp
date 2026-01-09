@@ -4,11 +4,12 @@ import Dashboard from "./pages/Dashboard";
 import MainLayout from "./layouts/MainLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
+import HomeLayout from "./layouts/HomeLayout";
+import Home from "./pages/Home";
 
 export default function App() {
   return (
     <Routes>
-      {/* Login (public tapi dicegat kalau sudah auth) */}
       <Route
         path="/login"
         element={
@@ -20,7 +21,6 @@ export default function App() {
         }
       />
 
-      {/* Dashboard (protected) */}
       <Route
         path="/dashboard"
         element={
@@ -32,10 +32,14 @@ export default function App() {
         }
       />
 
-      {/* Root */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-      {/* Fallback */}
+      <Route
+        path="/"
+        element={
+          <HomeLayout title="SANDIGI - Sistem Antrian Digital">
+            <Home />
+          </HomeLayout>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
