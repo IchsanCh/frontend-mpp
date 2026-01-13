@@ -84,7 +84,7 @@ export default function Login() {
         authService.saveToken(response.token);
         authService.saveUser(response.user);
 
-        navigate("/dashboard");
+        navigate("/admin/dashboard");
       } catch (error) {
         setLoginError(error.message || "Login gagal. Silakan coba lagi.");
       } finally {

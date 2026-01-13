@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import HomeLayout from "./layouts/HomeLayout";
 import Home from "./pages/Home";
+import AdminLayout from "./layouts/AdminLayout";
 
 export default function App() {
   return (
@@ -22,12 +23,12 @@ export default function App() {
       />
 
       <Route
-        path="/dashboard"
+        path="/admin/dashboard"
         element={
           <ProtectedRoute>
-            <MainLayout title="Dashboard">
+            <AdminLayout title="Dashboard">
               <Dashboard />
-            </MainLayout>
+            </AdminLayout>
           </ProtectedRoute>
         }
       />
