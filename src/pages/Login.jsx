@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Mail,
@@ -11,8 +11,27 @@ import {
 } from "lucide-react";
 import logo from "../assets/images/logo.webp";
 import { authService } from "../services/api";
+
+const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 const APP_NAME = import.meta.env.VITE_APP_NAME || "SANDIGI";
+
 export default function Login() {
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = `https://www.google.com/recaptcha/api.js?render=${SITE_KEY}`;
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    return () => {
+      const badge = document.querySelector(".grecaptcha-badge");
+      if (badge) badge.remove();
+
+      document.body.removeChild(script);
+      delete window.grecaptcha;
+    };
+  }, []);
+
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
@@ -22,6 +41,13 @@ export default function Login() {
   const [touched, setTouched] = useState({ email: false, password: false });
   const [errors, setErrors] = useState({ email: "", password: "" });
   const [loginError, setLoginError] = useState("");
+
+  const getRecaptchaToken = async () => {
+    return await window.grecaptcha.execute(
+      import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+      { action: "login" }
+    );
+  };
 
   const validateEmail = (value) => {
     if (!value) return "Email wajib diisi";
@@ -79,12 +105,23 @@ export default function Login() {
     if (!emailError && !passwordError) {
       setIsLoading(true);
       try {
-        const response = await authService.login(email, password);
+        const recaptchaToken = await getRecaptchaToken();
+
+        const response = await authService.login(
+          email,
+          password,
+          recaptchaToken
+        );
 
         authService.saveToken(response.token);
         authService.saveUser(response.user);
 
-        navigate("/admin/dashboard");
+        // Simpan pesan dari backend untuk ditampilkan di dashboard
+        if (response.message) {
+          sessionStorage.setItem("loginMessage", response.message);
+        }
+
+        navigate("/admin/dashboard", { replace: true });
       } catch (error) {
         setLoginError(error.message || "Login gagal. Silakan coba lagi.");
       } finally {

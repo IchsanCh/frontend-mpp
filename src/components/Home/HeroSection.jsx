@@ -21,12 +21,6 @@ export default function HeroSection() {
             >
               Cek Nomor Antrian
             </Link>
-            <Link
-              to="/about"
-              className="btn btn-outline btn-sm sm:btn-md lg:btn-lg shadow-lg hover:bg-0 hover:text-white hover:shadow-xl transition-all duration-200"
-            >
-              About Us
-            </Link>
           </div>
         </div>
         <div className="lg:ml-12">

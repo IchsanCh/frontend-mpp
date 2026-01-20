@@ -1,13 +1,17 @@
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9080";
 
 export const authService = {
-  async login(email, password) {
-    const response = await fetch(`${API_URL}/login`, {
+  async login(email, password, recaptchaToken) {
+    const response = await fetch(`${API_URL}/san/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({
+        email,
+        password,
+        recaptcha_token: recaptchaToken,
+      }),
     });
 
     const data = await response.json();
@@ -17,6 +21,23 @@ export const authService = {
     }
 
     return data;
+  },
+  logout: async () => {
+    const token = sessionStorage.getItem("token");
+    try {
+      if (token) {
+        await fetch(`${API_URL}/api/logout`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+    } catch (e) {
+    } finally {
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
+    }
   },
 
   saveToken(token) {

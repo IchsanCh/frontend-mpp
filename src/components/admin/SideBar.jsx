@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -20,6 +20,7 @@ const APP_NAME = import.meta.env.VITE_APP_NAME || "SANDIGI";
 
 export default function SideBar({ children }) {
   const location = useLocation();
+  const navigate = useNavigate(); // ← TAMBAHKAN INI
   const user = authService.getUser();
   const [isLaporanOpen, setIsLaporanOpen] = useState(false);
 
@@ -107,6 +108,19 @@ export default function SideBar({ children }) {
     }
   };
 
+  // Buat handler logout yang reusable
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      handleCloseMobileMenu();
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Tetap redirect meskipun ada error
+      navigate("/login", { replace: true });
+    }
+  };
+
   return (
     <div className="drawer lg:drawer-open">
       <input id="admin-drawer" type="checkbox" className="drawer-toggle" />
@@ -179,14 +193,14 @@ export default function SideBar({ children }) {
                 </li>
                 <div className="divider my-1"></div>
                 <li>
-                  <Link
-                    to="/logout"
-                    className="gap-2 text-error hover:bg-error hover:text-error-content"
-                    onClick={handleCloseMobileMenu}
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 text-error hover:bg-error hover:text-error-content px-4 py-2"
                   >
                     <LogOut className="h-4 w-4" />
                     <span className="font-medium">Logout</span>
-                  </Link>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -316,7 +330,7 @@ export default function SideBar({ children }) {
                                     </span>
                                   </div>
                                   {active && (
-                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-content rounded-r-full"></div>
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-2 rounded-r-full"></div>
                                   )}
                                 </Link>
                               </li>
@@ -340,7 +354,7 @@ export default function SideBar({ children }) {
                         group relative font-medium transition-all duration-200
                         ${
                           active
-                            ? "bg-primary text-primary-content hover:bg-primary/90"
+                            ? "bg-0 text-primary-content hover:bg-black hover:text-white duration-200 transition-all"
                             : "hover:bg-base-200"
                         }
                       `}
@@ -361,14 +375,14 @@ export default function SideBar({ children }) {
                           className={`text-xs ${
                             active
                               ? "text-primary-content/80"
-                              : "text-base-content/50"
+                              : "text-base-content/70"
                           }`}
                         >
                           {item.description}
                         </span>
                       </div>
                       {active && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary-content rounded-r-full"></div>
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-2 rounded-r-full"></div>
                       )}
                     </Link>
                   </li>
@@ -428,14 +442,13 @@ export default function SideBar({ children }) {
                 </li>
                 <div className="divider my-1"></div>
                 <li>
-                  <Link
-                    to="/logout"
-                    className="gap-2 text-error hover:bg-error hover:text-error-content"
-                    onClick={handleCloseMobileMenu}
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 text-error hover:bg-error hover:text-error-content px-4 py-2"
                   >
                     <LogOut className="h-4 w-4" />
                     <span className="font-medium">Logout</span>
-                  </Link>
+                  </button>
                 </li>
               </ul>
             </div>
