@@ -7,6 +7,8 @@ import PublicRoute from "./components/PublicRoute";
 import HomeLayout from "./layouts/HomeLayout";
 import Home from "./pages/Home";
 import AdminLayout from "./layouts/AdminLayout";
+import UnitManagement from "./pages/Unit";
+import ConfigManagement from "./pages/Config";
 
 export default function App() {
   return (
@@ -28,6 +30,28 @@ export default function App() {
           <ProtectedRoute>
             <AdminLayout title="Dashboard">
               <Dashboard />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/units"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="Unit Management">
+              <UnitManagement />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/config"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="Configuration">
+              <ConfigManagement />
             </AdminLayout>
           </ProtectedRoute>
         }

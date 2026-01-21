@@ -33,14 +33,14 @@ export default function SideBar({ children }) {
         description: "Ringkasan & statistik",
       },
       {
-        to: "/admin/antrian",
-        title: "Kelola Antrian",
+        to: "/admin/units",
+        title: "Kelola Unit",
         icon: ClipboardList,
-        description: "Manajemen antrian",
+        description: "Manajemen Unit",
       },
       {
-        to: "/admin/layanan",
-        title: "Layanan",
+        to: "/admin/config",
+        title: "Pengaturan",
         icon: Settings,
         description: "Pengaturan layanan",
       },
@@ -350,39 +350,43 @@ export default function SideBar({ children }) {
                     <Link
                       to={item.to}
                       title={item.description}
-                      className={`
-                        group relative font-medium transition-all duration-200
-                        ${
-                          active
-                            ? "bg-0 text-primary-content hover:bg-black hover:text-white duration-200 transition-all"
-                            : "hover:bg-base-200"
-                        }
-                      `}
+                      className={`group relative font-medium transition-all duration-200
+      ${active ? "bg-0" : "hover:bg-0"}
+    `}
                       onClick={handleCloseMobileMenu}
                     >
                       <Icon
                         className={`h-5 w-5 transition-transform group-hover:scale-110 ${
                           active
-                            ? "text-primary-content"
-                            : "text-base-content/70"
+                            ? "text-white"
+                            : "text-base-content/70 group-hover:text-white"
                         }`}
                       />
+
                       <div className="flex flex-col items-start">
-                        <span className="text-sm font-semibold">
+                        <span
+                          className={`text-sm font-semibold transition-colors ${
+                            active
+                              ? "text-white"
+                              : "text-base-content group-hover:text-white"
+                          }`}
+                        >
                           {item.title}
                         </span>
+
                         <span
-                          className={`text-xs ${
+                          className={`text-xs transition-colors ${
                             active
-                              ? "text-primary-content/80"
-                              : "text-base-content/70"
+                              ? "text-white"
+                              : "text-base-content/70 group-hover:text-white"
                           }`}
                         >
                           {item.description}
                         </span>
                       </div>
+
                       {active && (
-                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-2 rounded-r-full"></div>
+                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-2 rounded-r-full" />
                       )}
                     </Link>
                   </li>

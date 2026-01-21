@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
 html {
   scroll-behavior: smooth;
 }
@@ -116,4 +117,53 @@ html {
 @utility step-color-0 {
   --step-bg: #8c6a4b;
   --step-fg: #fffbe9;
+}
+@utility input-base {
+  @apply w-full rounded-lg border bg-white px-3 py-2 text-sm outline-none
+         transition-all duration-200
+         focus-visible:ring-2 focus-visible:ring-offset-1;
+}
+@utility input-0 {
+  @apply border-[color:#ceab93]
+         focus:border-[color:#8c6a4b]
+         focus-visible:ring-[color:#8c6a4b];
+}
+@utility input-1 {
+  @apply border-[color:#e3caa5]
+         focus:border-[color:#ad8b73]
+         focus-visible:ring-[color:#ad8b73]/40;
+}
+@utility input-2 {
+  @apply border-[color:#fffbe9]
+         focus:border-[color:#ceab93]
+         focus-visible:ring-[color:#ceab93]/40;
+}
+@utility input-error {
+  @apply border-red-500
+         focus:border-red-500
+         focus-visible:ring-red-500/40;
+}
+@utility select-base {
+  @apply transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1;
+}
+@utility select-0 {
+  @apply border-[color:#ceab93] 
+         focus:border-[color:#8c6a4b] 
+         focus-visible:ring-[color:#8c6a4b];
+}
+
+@utility select-1 {
+  @apply border-[color:#e3caa5]
+         focus:border-[color:#ad8b73]
+         focus-visible:ring-[color:#ad8b73]/40;
+}
+@utility select-2 {
+  @apply border-[color:#fffbe9]
+         focus:border-[color:#ceab93]
+         focus-visible:ring-[color:#ceab93]/40;
+}
+@utility select-error {
+  @apply border-red-500
+         focus:border-red-500
+         focus-visible:ring-red-500/40;
 }
