@@ -9,12 +9,13 @@ import Home from "./pages/Home";
 import AdminLayout from "./layouts/AdminLayout";
 import UnitManagement from "./pages/Unit";
 import ConfigManagement from "./pages/Config";
+import UserManagement from "./pages/Users";
 
 export default function App() {
   return (
     <Routes>
       <Route
-        path="/login"
+        path="/san/login"
         element={
           <PublicRoute>
             <MainLayout title="Login">
@@ -52,6 +53,17 @@ export default function App() {
           <ProtectedRoute>
             <AdminLayout title="Configuration">
               <ConfigManagement />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/users"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="User Management">
+              <UserManagement />
             </AdminLayout>
           </ProtectedRoute>
         }

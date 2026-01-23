@@ -113,11 +113,11 @@ export default function SideBar({ children }) {
     try {
       await authService.logout();
       handleCloseMobileMenu();
-      navigate("/login", { replace: true });
+      navigate("/san/login", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
       // Tetap redirect meskipun ada error
-      navigate("/login", { replace: true });
+      navigate("/san/login", { replace: true });
     }
   };
 

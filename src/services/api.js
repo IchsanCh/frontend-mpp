@@ -371,3 +371,103 @@ export const configService = {
     return data;
   },
 };
+export const userService = {
+  async getAll(params = {}) {
+    const token = authService.getToken();
+    const queryParams = new URLSearchParams();
+
+    if (params.isBanned) queryParams.append("is_banned", params.isBanned);
+    if (params.search) queryParams.append("search", params.search);
+    if (params.page) queryParams.append("page", params.page);
+    if (params.limit) queryParams.append("limit", params.limit);
+
+    const queryString = queryParams.toString();
+    const url = `${API_URL}/api/users/paginate${
+      queryString ? `?${queryString}` : ""
+    }`;
+
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await response.json();
+    if (!response.ok)
+      throw new Error(data.error || "Gagal mengambil data user");
+    return data;
+  },
+
+  async getById(id) {
+    const token = authService.getToken();
+    const response = await fetch(`${API_URL}/api/users/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = await response.json();
+    if (!response.ok)
+      throw new Error(data.error || "Gagal mengambil data user");
+    return data;
+  },
+
+  async create(userData) {
+    const token = authService.getToken();
+    const user = authService.getUser();
+
+    const response = await fetch(`${API_URL}/api/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        email: user?.email,
+        ...userData,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Gagal membuat user");
+    return data;
+  },
+
+  async update(id, userData) {
+    const token = authService.getToken();
+    const user = authService.getUser();
+
+    const response = await fetch(`${API_URL}/api/users/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        email: user?.email,
+        ...userData,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "Gagal mengupdate user");
+    return data;
+  },
+
+  async hardDelete(id) {
+    const token = authService.getToken();
+    const user = authService.getUser();
+
+    const response = await fetch(`${API_URL}/api/users/${id}/permanent`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        email: user?.email,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok)
+      throw new Error(data.error || "Gagal menghapus user permanent");
+    return data;
+  },
+};

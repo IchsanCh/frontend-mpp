@@ -5,7 +5,7 @@ export default function Footer() {
   return (
     <footer className="bg-black text-white">
       <div className="container mx-auto px-4">
-        <div className="footer py-10 grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="footer py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
           <aside className="col-span-1">
             <div className="text-2xl font-bold mb-3">
               <span className="text-white">{APP_NAME}</span>
@@ -23,7 +23,7 @@ export default function Footer() {
             <Link to="/antrian" title="Antrian" className="link link-hover">
               Antrian
             </Link>
-            <Link to="/login" title="Login" className="link link-hover">
+            <Link to="/san/login" title="Login" className="link link-hover">
               Login
             </Link>
           </nav>

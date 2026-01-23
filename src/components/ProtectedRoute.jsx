@@ -4,7 +4,7 @@ import { authService } from "../services/api";
 export default function ProtectedRoute({ children }) {
   const isAuthenticated = authService.isAuthenticated();
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/san/login" replace />;
   }
 
   return children;

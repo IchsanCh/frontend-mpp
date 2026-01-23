@@ -56,7 +56,7 @@ export default function PublikNavbar() {
 
           <div className="navbar-end">
             <Link
-              to="/login"
+              to="/san/login"
               title="Login"
               className="btn bg-0 rounded-md text-white font-semibold hover:bg-white hover:text-black hover:border hover:border-black"
             >

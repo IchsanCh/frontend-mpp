@@ -2,7 +2,7 @@ export default function FooterAdmin() {
   return (
     <div className="bg-0 flex flex-col items-center justify-center p-2">
       <span className="text-white font-semibold">
-        &copy; 2026 SANDIGI - All Right Reserved
+        &copy; {new Date().getFullYear()} SANDIGI - All Right Reserved
       </span>
     </div>
   );
