@@ -8,7 +8,6 @@ export default function AdminLayout({ title, children }) {
   return (
     <div className="min-h-screen">
       <SideBar>
-        {/* Children langsung di pass ke SideBar */}
         {children}
         <FooterAdmin />
       </SideBar>

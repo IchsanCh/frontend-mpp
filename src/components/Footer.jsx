@@ -16,7 +16,7 @@ export default function Footer() {
             </p>
           </aside>
           <nav className="flex flex-col">
-            <h6 className="footer-title">Menu</h6>
+            <h1 className="footer-title">Menu</h1>
             <Link to="/" title="Home" className="link link-hover">
               Home
             </Link>
@@ -28,7 +28,7 @@ export default function Footer() {
             </Link>
           </nav>
           <nav className="flex flex-col">
-            <h6 className="footer-title">Support</h6>
+            <h1 className="footer-title">Support</h1>
             <a href="/#faq" title="FAQ" className="link link-hover">
               FAQ
             </a>

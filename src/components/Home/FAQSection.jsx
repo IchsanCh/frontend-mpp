@@ -47,6 +47,7 @@ export default function FAQSection() {
                 type="radio"
                 name="faq-accordion"
                 defaultChecked={index === 0}
+                aria-label={faq.question}
               />
 
               <div className="collapse-title text-lg font-medium">

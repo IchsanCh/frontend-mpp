@@ -10,6 +10,18 @@ import AdminLayout from "./layouts/AdminLayout";
 import UnitManagement from "./pages/Unit";
 import ConfigManagement from "./pages/Config";
 import UserManagement from "./pages/Users";
+import ServiceManagement from "./pages/Service";
+import UnitPage from "./pages/AmbilAntrian";
+import DisplayAntrian from "./pages/Antrian";
+import AntrianLayout from "./layouts/AntrianLayout";
+import AudioManagement from "./pages/Audio";
+import CallerMenu from "./pages/CallerMenu";
+import CallerService from "./pages/CallerServices";
+import ReportManagement from "./pages/Report";
+import UnitDashboard from "./pages/UnitDashboard";
+import { authService } from "./services/api";
+import NotFound from "./pages/NotFound";
+import UnitReportManagement from "./pages/UnitReports";
 
 export default function App() {
   return (
@@ -30,7 +42,11 @@ export default function App() {
         element={
           <ProtectedRoute>
             <AdminLayout title="Dashboard">
-              <Dashboard />
+              {authService.getUser()?.role === "super_user" ? (
+                <Dashboard />
+              ) : (
+                <UnitDashboard />
+              )}
             </AdminLayout>
           </ProtectedRoute>
         }
@@ -70,6 +86,78 @@ export default function App() {
       />
 
       <Route
+        path="/admin/services"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="Service Management">
+              <ServiceManagement />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/antrian"
+        element={
+          <ProtectedRoute>
+            <AntrianLayout title="Ambil Antrian">
+              <UnitPage />
+            </AntrianLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/audio"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="Management Audio">
+              <AudioManagement />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/reports"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="Laporan Analitik">
+              <ReportManagement />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/caller"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="Management Caller">
+              <CallerMenu />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/reports/unit"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="Laporan Analitik Unit">
+              <UnitReportManagement />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/caller/services/:serviceId"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="Caller Service">
+              <CallerService />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
         path="/"
         element={
           <HomeLayout title="SANDIGI - Sistem Antrian Digital">
@@ -77,7 +165,15 @@ export default function App() {
           </HomeLayout>
         }
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route
+        path="/antrian"
+        element={
+          <AntrianLayout title="Cek Nomor Antrian">
+            <DisplayAntrian />
+          </AntrianLayout>
+        }
+      />
+      <Route path="*" Component={NotFound} />
     </Routes>
   );
 }

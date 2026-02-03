@@ -11,7 +11,7 @@ export default function TimePicker({
   return (
     <>
       <Flatpickr
-        className={`input input-bordered w-full ${error ? "input-error" : ""}`}
+        className={`input-base input-0 w-full ${error ? "input-error" : ""}`}
         value={value}
         options={{
           enableTime: true,

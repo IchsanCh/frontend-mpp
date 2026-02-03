@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { authService, unitService } from "../services/api";
+import { authService, serviceService, unitService } from "../services/api";
 import Pagination from "../components/admin/Pagination";
 
-export default function UnitManagement() {
-  const [units, setUnits] = useState([]);
+export default function ServiceManagement() {
+  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterActive, setFilterActive] = useState("");
@@ -18,19 +18,20 @@ export default function UnitManagement() {
 
   const [formData, setFormData] = useState({
     code: "",
-    nama_unit: "",
+    nama_service: "",
+    loket: "",
+    limits_queue: 0,
     is_active: "y",
-    main_display: "",
   });
-  const [editingUnit, setEditingUnit] = useState(null);
-  const [deletingUnit, setDeletingUnit] = useState(null);
+  const [editingService, setEditingService] = useState(null);
+  const [deletingService, setDeletingService] = useState(null);
   const [formErrors, setFormErrors] = useState({});
 
   const user = authService.getUser();
-  const isSuperUser = user?.role === "super_user";
+  const isUnitRole = user?.role === "unit";
 
   useEffect(() => {
-    fetchUnits();
+    fetchServices();
   }, [filterActive, searchTerm, page]);
 
   useEffect(() => {
@@ -39,17 +40,17 @@ export default function UnitManagement() {
     }
   }, [searchTerm]);
 
-  const fetchUnits = async () => {
+  const fetchServices = async () => {
     setLoading(true);
     try {
-      const response = await unitService.getAll({
+      const response = await serviceService.getAll({
         isActive: filterActive,
         search: searchTerm.trim(),
         page: page,
         limit: limit,
       });
 
-      setUnits(response.data || []);
+      setServices(response.data || []);
       setTotalPages(response.pagination?.total_pages || 1);
       setTotalItems(response.pagination?.total_data || 0);
     } catch (error) {
@@ -96,13 +97,22 @@ export default function UnitManagement() {
     const errors = {};
 
     if (!formData.code.trim()) {
-      errors.code = "Kode unit wajib diisi";
-    } else if (!/^[A-Z]{1,10}$/.test(formData.code)) {
-      errors.code = "Kode unit hanya boleh huruf A–Z (maks. 10 karakter)";
+      errors.code = "Kode layanan wajib diisi";
+    } else if (!/^[A-Z]{1,2}$/.test(formData.code)) {
+      errors.code =
+        "Kode layanan harus 1-2 huruf (A-Z), tanpa angka atau karakter khusus";
     }
 
-    if (!formData.nama_unit.trim()) {
-      errors.nama_unit = "Nama unit wajib diisi";
+    if (!formData.nama_service.trim()) {
+      errors.nama_service = "Nama layanan wajib diisi";
+    }
+
+    if (!formData.loket.trim()) {
+      errors.loket = "Loket wajib diisi";
+    }
+
+    if (formData.limits_queue < 0) {
+      errors.limits_queue = "Batas antrian tidak boleh negatif";
     }
 
     setFormErrors(errors);
@@ -114,11 +124,13 @@ export default function UnitManagement() {
 
     setLoading(true);
     try {
-      await unitService.create(formData);
-      showToast("Unit berhasil dibuat");
+      await serviceService.create({
+        ...formData,
+      });
+      showToast("Layanan berhasil dibuat");
       setShowCreateModal(false);
       resetForm();
-      fetchUnits();
+      fetchServices();
     } catch (error) {
       showToast(error.message, "error");
     } finally {
@@ -126,13 +138,14 @@ export default function UnitManagement() {
     }
   };
 
-  const handleEdit = (unit) => {
-    setEditingUnit(unit);
+  const handleEdit = (service) => {
+    setEditingService(service);
     setFormData({
-      code: unit.code,
-      nama_unit: unit.nama_unit,
-      is_active: unit.is_active,
-      main_display: unit.main_display,
+      code: service.code,
+      nama_service: service.nama_service,
+      loket: service.loket,
+      limits_queue: service.limits_queue,
+      is_active: service.is_active,
     });
     setShowEditModal(true);
   };
@@ -142,11 +155,13 @@ export default function UnitManagement() {
 
     setLoading(true);
     try {
-      await unitService.update(editingUnit.id, formData);
-      showToast("Unit berhasil diupdate");
+      await serviceService.update(editingService.id, {
+        ...formData,
+      });
+      showToast("Layanan berhasil diupdate");
       setShowEditModal(false);
       resetForm();
-      fetchUnits();
+      fetchServices();
     } catch (error) {
       showToast(error.message, "error");
     } finally {
@@ -154,19 +169,19 @@ export default function UnitManagement() {
     }
   };
 
-  const handleDelete = (unit) => {
-    setDeletingUnit(unit);
+  const handleDelete = (service) => {
+    setDeletingService(service);
     setShowDeleteModal(true);
   };
 
   const confirmDelete = async () => {
     setLoading(true);
     try {
-      await unitService.hardDelete(deletingUnit.id);
-      showToast("Unit berhasil dihapus");
+      await serviceService.hardDelete(deletingService.id);
+      showToast("Layanan berhasil dihapus");
       setShowDeleteModal(false);
-      setDeletingUnit(null);
-      fetchUnits();
+      setDeletingService(null);
+      fetchServices();
     } catch (error) {
       showToast(error.message, "error");
     } finally {
@@ -177,19 +192,21 @@ export default function UnitManagement() {
   const resetForm = () => {
     setFormData({
       code: "",
-      nama_unit: "",
+      nama_service: "",
+      loket: "",
+      limits_queue: 0,
       is_active: "y",
-      main_display: "",
     });
     setFormErrors({});
-    setEditingUnit(null);
+    setEditingService(null);
   };
 
-  const filteredUnits = units.filter((unit) => {
+  const filteredServices = services.filter((service) => {
     const searchLower = searchTerm.toLowerCase();
     return (
-      unit.code.toLowerCase().includes(searchLower) ||
-      unit.nama_unit.toLowerCase().includes(searchLower)
+      service.code.toLowerCase().includes(searchLower) ||
+      service.nama_service.toLowerCase().includes(searchLower) ||
+      service.loket?.toLowerCase().includes(searchLower)
     );
   });
 
@@ -197,10 +214,10 @@ export default function UnitManagement() {
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-base-content">
-          Management Unit
+          Management Layanan
         </h1>
         <p className="text-sm text-base-content/70 mt-1">
-          Kelola data unit pelayanan
+          Kelola data layanan per unit
         </p>
       </div>
 
@@ -210,7 +227,7 @@ export default function UnitManagement() {
             <div className="flex flex-col sm:flex-row gap-2 flex-1">
               <input
                 type="text"
-                placeholder="Cari kode atau nama unit..."
+                placeholder="Cari kode atau nama layanan..."
                 className="input-base input-0 w-full sm:w-64"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -230,7 +247,7 @@ export default function UnitManagement() {
               </select>
             </div>
 
-            {isSuperUser && (
+            {isUnitRole && (
               <button
                 className="btn bg-0 text-white hover:bg-3 hover:text-black hover:border hover:border-black transition-all duration-200 shadow-lg hover:shadow-xl"
                 onClick={() => setShowCreateModal(true)}
@@ -247,7 +264,7 @@ export default function UnitManagement() {
                     clipRule="evenodd"
                   />
                 </svg>
-                Tambah Unit
+                Tambah Layanan
               </button>
             )}
           </div>
@@ -262,79 +279,80 @@ export default function UnitManagement() {
                 <tr>
                   <th className="min-w-[30px]">No</th>
                   <th className="min-w-[80px]">Kode</th>
-                  <th className="min-w-[150px]">Nama Unit</th>
-                  <th className="min-w-[130px]">Status</th>
-                  <th className="min-w-[130px]">Main Song</th>
+                  <th className="min-w-[150px]">Nama Layanan</th>
+                  <th className="min-w-[100px]">Loket</th>
+                  <th className="min-w-[80px]">Batas Antrian</th>
+                  <th className="min-w-[100px]">Status</th>
                   <th className="min-w-[130px]">Dibuat</th>
-                  {isSuperUser && <th className="text-center">Aksi</th>}
+                  {isUnitRole && <th className="text-center">Aksi</th>}
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={isSuperUser ? 7 : 6}
+                      colSpan={isUnitRole ? 8 : 7}
                       className="text-center py-8"
                     >
                       <span className="loading loading-spinner loading-lg"></span>
                     </td>
                   </tr>
-                ) : filteredUnits.length === 0 ? (
+                ) : filteredServices.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={isSuperUser ? 7 : 6}
+                      colSpan={isUnitRole ? 8 : 7}
                       className="text-center py-8 text-base-content/70"
                     >
-                      Tidak ada data unit
+                      Tidak ada data layanan
                     </td>
                   </tr>
                 ) : (
-                  filteredUnits.map((unit, index) => (
-                    <tr key={unit.id}>
+                  filteredServices.map((service, index) => (
+                    <tr key={service.id}>
                       <td>{(page - 1) * limit + index + 1}</td>
                       <td>
                         <span className="font-mono font-semibold">
-                          {unit.code}
+                          {service.code}
                         </span>
                       </td>
-                      <td>{unit.nama_unit}</td>
+                      <td>{service.nama_service}</td>
+                      <td>
+                        <span className="badge badge-outline">
+                          {service.loket}
+                        </span>
+                      </td>
+                      <td className="text-center">
+                        <span className="font-semibold">
+                          {service.limits_queue}
+                        </span>
+                      </td>
                       <td>
                         <span
                           className={`badge font-semibold ${
-                            unit.is_active === "y"
+                            service.is_active === "y"
                               ? "badge-success"
                               : "badge-error"
                           }`}
                         >
-                          {unit.is_active === "y" ? "Aktif" : "Tidak Aktif"}
+                          {service.is_active === "y" ? "Aktif" : "Tidak Aktif"}
                         </span>
                       </td>
                       <td>
-                        <span
-                          className={`badge font-semibold ${
-                            unit.main_display === "active"
-                              ? "badge-success"
-                              : "badge-error"
-                          }`}
-                        >
-                          {unit.main_display === "active"
-                            ? "Aktif"
-                            : "Tidak Aktif"}
-                        </span>
+                        {new Date(service.created_at).toLocaleDateString(
+                          "id-ID",
+                          {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          }
+                        )}
                       </td>
-                      <td>
-                        {new Date(unit.created_at).toLocaleDateString("id-ID", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      {isSuperUser && (
+                      {isUnitRole && (
                         <td>
                           <div className="flex gap-2 justify-center">
                             <button
                               className="btn btn-sm btn-info"
-                              onClick={() => handleEdit(unit)}
+                              onClick={() => handleEdit(service)}
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -347,7 +365,7 @@ export default function UnitManagement() {
                             </button>
                             <button
                               className="btn btn-sm btn-error"
-                              onClick={() => handleDelete(unit)}
+                              onClick={() => handleDelete(service)}
                             >
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
@@ -373,6 +391,7 @@ export default function UnitManagement() {
           </div>
         </div>
       </div>
+
       <Pagination
         page={page}
         totalPages={totalPages}
@@ -380,28 +399,24 @@ export default function UnitManagement() {
         limit={limit}
         onPageChange={setPage}
       />
+
       {showCreateModal && (
         <div className="modal modal-open">
-          <div className="modal-box w-full max-w-lg rounded-2xl p-6">
-            <div className="mb-6 border-b borderc3 pb-3">
-              <h3 className="text-lg font-semibold color0">Tambah Unit Baru</h3>
-              <p className="text-xs text-base-content/80">
-                Isi data unit pelayanan dengan benar
-              </p>
-            </div>
+          <div className="modal-box w-full max-w-2xl">
+            <h3 className="text-xl font-bold mb-6">Tambah Layanan Baru</h3>
 
-            <div className="space-y-5">
-              <div className="form-control">
-                <label className="label pb-1">
-                  <span className="label-text font-medium text-black">
-                    Kode Unit <span className="text-error">*</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text text-black font-medium">
+                    Kode Layanan <span className="text-error">*</span>
                   </span>
-                </label>
+                </div>
                 <input
                   type="text"
-                  placeholder="Contoh: SANDIGI"
-                  maxLength={10}
-                  className={`input-base input-0 ${
+                  placeholder="Contoh: LOKET"
+                  maxLength={2}
+                  className={`input-base input-0 w-full ${
                     formErrors.code ? "input-error" : ""
                   }`}
                   value={formData.code}
@@ -409,55 +424,116 @@ export default function UnitManagement() {
                     const value = e.target.value
                       .toUpperCase()
                       .replace(/[^A-Z]/g, "");
-
-                    setFormData({
-                      ...formData,
-                      code: value,
-                    });
+                    setFormData({ ...formData, code: value });
                   }}
                 />
-                {formErrors.code && (
-                  <span className="mt-1 text-xs text-error">
-                    {formErrors.code}
-                  </span>
-                )}
-                <p className="mt-1 text-xs text-base-content/80">
-                  Maksimal 10 huruf (A–Z), tanpa angka atau karakter khusus
-                </p>
-              </div>
+                <div className="label">
+                  {formErrors.code ? (
+                    <span className="label-text-alt text-error">
+                      {formErrors.code}
+                    </span>
+                  ) : (
+                    <span className="label-text-alt">
+                      1-2 huruf (A-Z), tanpa angka atau simbol
+                    </span>
+                  )}
+                </div>
+              </label>
 
-              <div className="form-control">
-                <label className="label pb-1">
-                  <span className="label-text font-medium text-black">
-                    Nama Unit <span className="text-error">*</span>
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text text-black font-medium">
+                    Nama Layanan <span className="text-error">*</span>
                   </span>
-                </label>
+                </div>
                 <input
                   type="text"
-                  placeholder="Contoh: Sistem Antrian Digital"
-                  className={`input-base input-0 ${
-                    formErrors.nama_unit ? "input-error" : ""
+                  placeholder="Contoh: Loket Pendaftaran"
+                  className={`input-base input-0 w-full ${
+                    formErrors.nama_service ? "input-error" : ""
                   }`}
-                  value={formData.nama_unit}
+                  value={formData.nama_service}
                   onChange={(e) =>
-                    setFormData({ ...formData, nama_unit: e.target.value })
+                    setFormData({ ...formData, nama_service: e.target.value })
                   }
                 />
-                {formErrors.nama_unit && (
-                  <span className="mt-1 text-xs text-error">
-                    {formErrors.nama_unit}
-                  </span>
-                )}
-              </div>
+                <div className="label">
+                  {formErrors.nama_service && (
+                    <span className="label-text-alt text-error">
+                      {formErrors.nama_service}
+                    </span>
+                  )}
+                </div>
+              </label>
 
-              <div className="form-control gap-2 flex">
-                <label className="label pb-1">
-                  <span className="label-text font-medium text-black">
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text text-black font-medium">
+                    Loket <span className="text-error">*</span>
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Contoh: 1, 2"
+                  className={`input-base input-0 w-full ${
+                    formErrors.loket ? "input-error" : ""
+                  }`}
+                  value={formData.loket}
+                  onChange={(e) =>
+                    setFormData({ ...formData, loket: e.target.value })
+                  }
+                />
+                <div className="label">
+                  {formErrors.loket && (
+                    <span className="label-text-alt text-error">
+                      {formErrors.loket}
+                    </span>
+                  )}
+                </div>
+              </label>
+
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text text-black font-medium">
+                    Batas Antrian <span className="text-error">*</span>
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="0"
+                  className={`input-base input-0 w-full ${
+                    formErrors.limits_queue ? "input-error" : ""
+                  }`}
+                  value={formData.limits_queue}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      limits_queue: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+                <div className="label">
+                  {formErrors.limits_queue ? (
+                    <span className="label-text-alt text-error">
+                      {formErrors.limits_queue}
+                    </span>
+                  ) : (
+                    <span className="label-text-alt">
+                      Maksimal antrian per hari (0 = unlimited)
+                    </span>
+                  )}
+                </div>
+              </label>
+
+              <label className="form-control w-full md:col-span-2">
+                <div className="label">
+                  <span className="label-text text-black font-medium">
                     Status
                   </span>
-                </label>
+                </div>
                 <select
-                  className="select select-bordered select-0"
+                  className="select select-0 w-full"
                   value={formData.is_active}
                   onChange={(e) =>
                     setFormData({ ...formData, is_active: e.target.value })
@@ -466,29 +542,13 @@ export default function UnitManagement() {
                   <option value="y">Aktif</option>
                   <option value="n">Tidak Aktif</option>
                 </select>
-              </div>
-              <div className="form-control gap-2 flex">
-                <label className="label pb-1">
-                  <span className="label-text font-medium text-black">
-                    Main Song
-                  </span>
-                </label>
-                <select
-                  className="select select-bordered select-0"
-                  value={formData.main_display}
-                  onChange={(e) =>
-                    setFormData({ ...formData, main_display: e.target.value })
-                  }
-                >
-                  <option value="active">Aktif</option>
-                  <option value="inactive">Tidak Aktif</option>
-                </select>
-              </div>
+              </label>
             </div>
 
-            <div className="mt-8 flex justify-end gap-3">
+            <div className="modal-action">
               <button
-                className="btn btn-ghost"
+                type="button"
+                className="btn"
                 onClick={() => {
                   setShowCreateModal(false);
                   resetForm();
@@ -497,8 +557,8 @@ export default function UnitManagement() {
               >
                 Batal
               </button>
-
               <button
+                type="button"
                 className="btn bg-0 text-white hover:bg-3 hover:text-black hover:border hover:border-black transition-all duration-200 shadow-lg hover:shadow-xl"
                 onClick={handleCreate}
                 disabled={loading}
@@ -511,38 +571,32 @@ export default function UnitManagement() {
               </button>
             </div>
           </div>
-
           <div
             className="modal-backdrop"
             onClick={() => {
               setShowCreateModal(false);
               resetForm();
             }}
-          />
+          ></div>
         </div>
       )}
 
       {showEditModal && (
         <div className="modal modal-open">
-          <div className="modal-box w-full max-w-lg rounded-2xl p-6">
-            <div className="mb-6 border-b borderc3 pb-3">
-              <h3 className="text-lg font-semibold color0">Edit Unit</h3>
-              <p className="text-xs text-base-content/80">
-                Perbarui data unit pelayanan
-              </p>
-            </div>
+          <div className="modal-box w-full max-w-2xl">
+            <h3 className="text-xl font-bold mb-6">Edit Layanan</h3>
 
-            <div className="space-y-5">
-              <div className="form-control">
-                <label className="label pb-1">
-                  <span className="label-text font-medium text-black">
-                    Kode Unit <span className="text-error">*</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text text-black font-medium">
+                    Kode Layanan <span className="text-error">*</span>
                   </span>
-                </label>
+                </div>
                 <input
                   type="text"
-                  maxLength={10}
-                  className={`input-base input-0 ${
+                  maxLength={2}
+                  className={`input-base input-0 w-full ${
                     formErrors.code ? "input-error" : ""
                   }`}
                   value={formData.code}
@@ -553,47 +607,110 @@ export default function UnitManagement() {
                     })
                   }
                 />
-                {formErrors.code && (
-                  <span className="mt-1 text-xs text-error">
-                    {formErrors.code}
-                  </span>
-                )}
-                <p className="mt-1 text-xs text-base-content/80">
-                  Maksimal 10 huruf (A–Z), tanpa angka atau karakter khusus
-                </p>
-              </div>
+                <div className="label">
+                  {formErrors.code ? (
+                    <span className="label-text-alt text-error">
+                      {formErrors.code}
+                    </span>
+                  ) : (
+                    <span className="label-text-alt">
+                      1-2 huruf (A-Z), tanpa angka atau simbol
+                    </span>
+                  )}
+                </div>
+              </label>
 
-              <div className="form-control">
-                <label className="label pb-1">
-                  <span className="label-text font-medium text-black">
-                    Nama Unit <span className="text-error">*</span>
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text text-black font-medium">
+                    Nama Layanan <span className="text-error">*</span>
                   </span>
-                </label>
+                </div>
                 <input
                   type="text"
-                  className={`input-base input-0 ${
-                    formErrors.nama_unit ? "input-error" : ""
+                  className={`input-base input-0 w-full ${
+                    formErrors.nama_service ? "input-error" : ""
                   }`}
-                  value={formData.nama_unit}
+                  value={formData.nama_service}
                   onChange={(e) =>
-                    setFormData({ ...formData, nama_unit: e.target.value })
+                    setFormData({ ...formData, nama_service: e.target.value })
                   }
                 />
-                {formErrors.nama_unit && (
-                  <span className="mt-1 text-xs text-error">
-                    {formErrors.nama_unit}
-                  </span>
-                )}
-              </div>
+                <div className="label">
+                  {formErrors.nama_service && (
+                    <span className="label-text-alt text-error">
+                      {formErrors.nama_service}
+                    </span>
+                  )}
+                </div>
+              </label>
 
-              <div className="form-control flex gap-2">
-                <label className="label pb-1">
-                  <span className="label-text font-medium text-black">
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text text-black font-medium">
+                    Loket <span className="text-error">*</span>
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  className={`input-base input-0 w-full ${
+                    formErrors.loket ? "input-error" : ""
+                  }`}
+                  value={formData.loket}
+                  onChange={(e) =>
+                    setFormData({ ...formData, loket: e.target.value })
+                  }
+                />
+                <div className="label">
+                  {formErrors.loket && (
+                    <span className="label-text-alt text-error">
+                      {formErrors.loket}
+                    </span>
+                  )}
+                </div>
+              </label>
+
+              <label className="form-control w-full">
+                <div className="label">
+                  <span className="label-text text-black font-medium">
+                    Batas Antrian <span className="text-error">*</span>
+                  </span>
+                </div>
+                <input
+                  type="number"
+                  min="0"
+                  className={`input-base input-0 w-full ${
+                    formErrors.limits_queue ? "input-error" : ""
+                  }`}
+                  value={formData.limits_queue}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      limits_queue: parseInt(e.target.value) || 0,
+                    })
+                  }
+                />
+                <div className="label">
+                  {formErrors.limits_queue ? (
+                    <span className="label-text-alt text-error">
+                      {formErrors.limits_queue}
+                    </span>
+                  ) : (
+                    <span className="label-text-alt">
+                      Maksimal antrian per hari (0 = unlimited)
+                    </span>
+                  )}
+                </div>
+              </label>
+
+              <label className="form-control w-full md:col-span-2">
+                <div className="label">
+                  <span className="label-text text-black font-medium">
                     Status
                   </span>
-                </label>
+                </div>
                 <select
-                  className="select select-bordered select-0"
+                  className="select select-0 w-full"
                   value={formData.is_active}
                   onChange={(e) =>
                     setFormData({ ...formData, is_active: e.target.value })
@@ -602,29 +719,13 @@ export default function UnitManagement() {
                   <option value="y">Aktif</option>
                   <option value="n">Tidak Aktif</option>
                 </select>
-              </div>
-              <div className="form-control flex gap-2">
-                <label className="label pb-1">
-                  <span className="label-text font-medium text-black">
-                    Main Song
-                  </span>
-                </label>
-                <select
-                  className="select select-bordered select-0"
-                  value={formData.main_display}
-                  onChange={(e) =>
-                    setFormData({ ...formData, main_display: e.target.value })
-                  }
-                >
-                  <option value="active">Aktif</option>
-                  <option value="inactive">Tidak Aktif</option>
-                </select>
-              </div>
+              </label>
             </div>
 
-            <div className="mt-8 flex justify-end gap-3">
+            <div className="modal-action">
               <button
-                className="btn btn-ghost"
+                type="button"
+                className="btn"
                 onClick={() => {
                   setShowEditModal(false);
                   resetForm();
@@ -633,8 +734,8 @@ export default function UnitManagement() {
               >
                 Batal
               </button>
-
               <button
+                type="button"
                 className="btn bg-0 text-white hover:bg-3 hover:text-black hover:border hover:border-black transition-all duration-200 shadow-lg hover:shadow-xl"
                 onClick={handleUpdate}
                 disabled={loading}
@@ -647,54 +748,49 @@ export default function UnitManagement() {
               </button>
             </div>
           </div>
-
           <div
             className="modal-backdrop"
             onClick={() => {
               setShowEditModal(false);
               resetForm();
             }}
-          />
+          ></div>
         </div>
       )}
 
-      {showDeleteModal && deletingUnit && (
+      {showDeleteModal && deletingService && (
         <div className="modal modal-open">
-          <div className="modal-box w-full max-w-md rounded-2xl p-6">
-            <div className="mb-4 border-b borderc3 pb-3">
-              <h3 className="text-lg font-semibold text-red-600">
-                Konfirmasi Hapus
-              </h3>
-            </div>
-
-            <div className="space-y-3">
-              <p>
-                Apakah Anda yakin ingin menghapus unit
-                <span className="font-semibold"> {deletingUnit.nama_unit}</span>
-                ?
-              </p>
-
-              <p className="text-sm text-base-content/80">
-                Data unit akan dihapus{" "}
-                <span className="font-medium text-red-600">permanen</span> dan
-                tidak dapat dikembalikan.
-              </p>
-            </div>
-
-            <div className="mt-8 flex justify-end gap-3">
+          <div className="modal-box">
+            <h3 className="text-lg font-bold text-error mb-4">
+              Konfirmasi Hapus
+            </h3>
+            <p className="py-4">
+              Apakah Anda yakin ingin menghapus layanan{" "}
+              <span className="font-semibold">
+                {deletingService.nama_service}
+              </span>
+              ?
+            </p>
+            <p className="text-sm text-base-content/70">
+              Data layanan akan dihapus{" "}
+              <span className="font-medium text-error">permanen</span> dan tidak
+              dapat dikembalikan.
+            </p>
+            <div className="modal-action">
               <button
-                className="btn btn-ghost"
+                type="button"
+                className="btn"
                 onClick={() => {
                   setShowDeleteModal(false);
-                  setDeletingUnit(null);
+                  setDeletingService(null);
                 }}
                 disabled={loading}
               >
                 Batal
               </button>
-
               <button
-                className="btn bg-red-600 text-white hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+                type="button"
+                className="btn btn-error"
                 onClick={confirmDelete}
                 disabled={loading}
               >
@@ -706,14 +802,13 @@ export default function UnitManagement() {
               </button>
             </div>
           </div>
-
           <div
             className="modal-backdrop"
             onClick={() => {
               setShowDeleteModal(false);
-              setDeletingUnit(null);
+              setDeletingService(null);
             }}
-          />
+          ></div>
         </div>
       )}
     </div>

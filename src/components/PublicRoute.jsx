@@ -3,7 +3,7 @@ import { authService } from "../services/api";
 
 export default function PublicRoute({ children }) {
   if (authService.isAuthenticated()) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   return children;

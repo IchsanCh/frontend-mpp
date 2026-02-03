@@ -3,7 +3,7 @@ import heroImage from "../../assets/images/hero.svg";
 
 export default function HeroSection() {
   return (
-    <div className="hero min-h-[calc(100vh-64px)] bg-gradient-to-r from-base-200 to-base-100">
+    <div className="hero bg-gradient-to-r from-base-200 to-base-100">
       <div className="hero-content flex-col md:flex-row items-center text-center lg:text-left py-20">
         <div className="max-w-2xl lg:max-w-xl">
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 leading-tight">

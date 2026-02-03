@@ -116,12 +116,11 @@ export default function Login() {
         authService.saveToken(response.token);
         authService.saveUser(response.user);
 
-        // Simpan pesan dari backend untuk ditampilkan di dashboard
         if (response.message) {
           sessionStorage.setItem("loginMessage", response.message);
         }
 
-        navigate("/admin/dashboard", { replace: true });
+        window.location.href = "/admin/dashboard";
       } catch (error) {
         setLoginError(error.message || "Login gagal. Silakan coba lagi.");
       } finally {
@@ -146,9 +145,7 @@ export default function Login() {
                   className="h-full object-cover w-16"
                 />
               </div>
-              <h2 className="text-2xl font-bold text-base-content">
-                Login {APP_NAME}
-              </h2>
+              <h2 className="text-2xl font-bold text-base-content">Login</h2>
             </div>
 
             {loginError && (

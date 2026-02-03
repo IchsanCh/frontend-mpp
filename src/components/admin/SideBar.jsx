@@ -11,6 +11,11 @@ import {
   User,
   FileText,
   TrendingUp,
+  LayersPlus,
+  ListOrdered,
+  Volume2,
+  BellElectricIcon,
+  BellRing,
 } from "lucide-react";
 import { useState } from "react";
 import logo from "../../assets/images/logo.webp";
@@ -20,7 +25,7 @@ const APP_NAME = import.meta.env.VITE_APP_NAME || "SANDIGI";
 
 export default function SideBar({ children }) {
   const location = useLocation();
-  const navigate = useNavigate(); // ← TAMBAHKAN INI
+  const navigate = useNavigate();
   const user = authService.getUser();
   const [isLaporanOpen, setIsLaporanOpen] = useState(false);
 
@@ -33,10 +38,22 @@ export default function SideBar({ children }) {
         description: "Ringkasan & statistik",
       },
       {
+        to: "/admin/antrian",
+        title: "Antrian",
+        icon: ListOrdered,
+        description: "Ambil Antrian",
+      },
+      {
         to: "/admin/units",
         title: "Kelola Unit",
         icon: ClipboardList,
         description: "Manajemen Unit",
+      },
+      {
+        to: "/admin/users",
+        title: "Pengguna",
+        icon: Users,
+        description: "Kelola pengguna",
       },
       {
         to: "/admin/config",
@@ -45,29 +62,35 @@ export default function SideBar({ children }) {
         description: "Pengaturan layanan",
       },
       {
+        to: "/admin/reports",
         title: "Laporan",
         icon: BarChart3,
-        description: "Data & analitik",
-        isDropdown: true,
-        subMenu: [
-          {
-            to: "/admin/laporan/harian",
-            title: "Laporan Harian",
-            icon: FileText,
-          },
-          {
-            to: "/admin/laporan/bulanan",
-            title: "Laporan Bulanan",
-            icon: TrendingUp,
-          },
-        ],
+        description: "Laporan Analitik",
       },
       {
-        to: "/admin/users",
-        title: "Pengguna",
-        icon: Users,
-        description: "Kelola pengguna",
+        to: "/admin/audio",
+        title: "Audio",
+        icon: Volume2,
+        description: "Management Audio",
       },
+      // {
+      //   title: "Laporan",
+      //   icon: BarChart3,
+      //   description: "Data & analitik",
+      //   isDropdown: true,
+      //   subMenu: [
+      //     {
+      //       to: "/admin/laporan/harian",
+      //       title: "Laporan Harian",
+      //       icon: FileText,
+      //     },
+      //     {
+      //       to: "/admin/laporan/bulanan",
+      //       title: "Laporan Bulanan",
+      //       icon: TrendingUp,
+      //     },
+      //   ],
+      // },
     ],
 
     unit: [
@@ -78,23 +101,35 @@ export default function SideBar({ children }) {
         description: "Ringkasan unit",
       },
       {
-        to: "/admin/antrian",
-        title: "Antrian Unit",
-        icon: ClipboardList,
-        description: "Kelola antrian unit",
+        to: "/admin/services",
+        title: "Service Management",
+        icon: LayersPlus,
+        description: "Management service",
       },
       {
+        to: "/admin/caller",
+        title: "Caller Antrian",
+        icon: BellRing,
+        description: "Panggil Antrian",
+      },
+      {
+        to: "/admin/reports/unit",
         title: "Laporan",
         icon: BarChart3,
-        isDropdown: true,
-        subMenu: [
-          {
-            to: "/admin/laporan/harian",
-            title: "Laporan Harian",
-            icon: FileText,
-          },
-        ],
+        description: "Laporan Analitik",
       },
+      // {
+      //   title: "Laporan",
+      //   icon: BarChart3,
+      //   isDropdown: true,
+      //   subMenu: [
+      //     {
+      //       to: "/admin/laporan/harian",
+      //       title: "Laporan Harian",
+      //       icon: FileText,
+      //     },
+      //   ],
+      // },
     ],
   };
   const role = user?.role || "guest";
@@ -108,7 +143,6 @@ export default function SideBar({ children }) {
     }
   };
 
-  // Buat handler logout yang reusable
   const handleLogout = async () => {
     try {
       await authService.logout();
@@ -116,7 +150,6 @@ export default function SideBar({ children }) {
       navigate("/san/login", { replace: true });
     } catch (error) {
       console.error("Logout error:", error);
-      // Tetap redirect meskipun ada error
       navigate("/san/login", { replace: true });
     }
   };
@@ -125,9 +158,7 @@ export default function SideBar({ children }) {
     <div className="drawer lg:drawer-open">
       <input id="admin-drawer" type="checkbox" className="drawer-toggle" />
 
-      {/* KONTEN UTAMA */}
       <div className="drawer-content flex flex-col">
-        {/* Navbar untuk mobile */}
         <div className="navbar bg-base-100 border-b border-base-300 lg:hidden fixed top-0 z-40 shadow-sm">
           <div className="navbar-start">
             <label
@@ -142,7 +173,6 @@ export default function SideBar({ children }) {
             <span className="text-lg font-bold color-0">{APP_NAME}</span>
           </div>
           <div className="navbar-end">
-            {/* User Dropdown Mobile */}
             <div className="dropdown dropdown-end">
               <div
                 tabIndex={0}
@@ -207,11 +237,9 @@ export default function SideBar({ children }) {
           </div>
         </div>
 
-        {/* CHILDREN RENDER DI SINI */}
         <main className="flex-1 pt-16 lg:pt-0">{children}</main>
       </div>
 
-      {/* Sidebar */}
       <div className="drawer-side z-50">
         <label
           htmlFor="admin-drawer"
@@ -220,7 +248,6 @@ export default function SideBar({ children }) {
         ></label>
 
         <aside className="w-64 min-h-full bg-base-100 border-r border-base-300 flex flex-col">
-          {/* Header Sidebar */}
           <div className="px-6 py-5 border-b bg-3 border-base-300">
             <Link
               to="/admin/dashboard"
@@ -241,13 +268,11 @@ export default function SideBar({ children }) {
             </Link>
           </div>
 
-          {/* Menu Items */}
           <nav className="flex-1 overflow-y-auto bg-4">
             <ul className="menu w-full p-4 gap-2">
               {menuItems.map((item, index) => {
                 const Icon = item.icon;
 
-                // Menu dengan dropdown
                 if (item.isDropdown) {
                   const hasActiveSubMenu = item.subMenu.some((sub) =>
                     isActive(sub.to)
@@ -342,7 +367,6 @@ export default function SideBar({ children }) {
                   );
                 }
 
-                // Menu biasa tanpa dropdown
                 const active = isActive(item.to);
 
                 return (
@@ -395,7 +419,6 @@ export default function SideBar({ children }) {
             </ul>
           </nav>
 
-          {/* Footer Sidebar - User Dropdown Desktop */}
           <div className="p-2 hidden lg:block border-t border-base-300 bg-3">
             <div className="dropdown dropdown-top dropdown-end w-full">
               <div
