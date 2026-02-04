@@ -1,16 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
+import { showToast } from "../utils/toast";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9080";
 const BASE_AUDIO_URL = API_URL;
 const CONFIG_API_URL = `${API_URL}/api/config`;
 
 const wsProtocol = API_URL.startsWith("https") ? "wss" : "ws";
-const DEFAULT_WS_URL = `${wsProtocol}://${API_URL.replace(
+const WS_URL = `${wsProtocol}://${API_URL.replace(
   /^https?:\/\//,
   ""
 )}/ws/queue`;
 
-const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
+const MAX_RETRIES = 5;
+
+const DisplayAntrian = () => {
   const [queues, setQueues] = useState([]);
   const [currentlyPlaying, setCurrentlyPlaying] = useState(null);
   const [displayedServices, setDisplayedServices] = useState({});
@@ -28,11 +31,14 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
   const scrollContainerRef = useRef(null);
   const activeCardRef = useRef(null);
   const currentAudioRef = useRef(null);
-  const timeoutRefs = useRef([]);
+  const reconnectTimeoutRef = useRef(null);
+  const activeLoketTimeoutRef = useRef(null);
+  const retryCountRef = useRef(0);
+  const hasShownMaxRetryToast = useRef(false);
 
   useEffect(() => {
     return () => {
-      console.log("[CLEANUP] Component unmounting, cleaning up...");
+      console.log("[CLEANUP] Component unmounting");
 
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
@@ -43,17 +49,20 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
       audioQueueRef.current = [];
       isPlayingRef.current = false;
 
-      timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
-      timeoutRefs.current = [];
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (activeLoketTimeoutRef.current) {
+        clearTimeout(activeLoketTimeoutRef.current);
+      }
 
       if (wsRef.current) {
+        wsRef.current.onclose = null;
         wsRef.current.close();
         wsRef.current = null;
       }
 
       processedCallsRef.current.clear();
-
-      console.log("[CLEANUP] Cleanup complete");
     };
   }, []);
 
@@ -66,16 +75,14 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
           setMarqueeText(result.data.text_marque);
         }
       } catch (err) {
-        console.error("[CONFIG] Failed to fetch marquee text:", err);
+        console.error("[CONFIG] Failed to fetch:", err);
       }
     };
 
     fetchConfig();
     const interval = setInterval(fetchConfig, 60000);
 
-    return () => {
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -83,9 +90,7 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
       setCurrentTime(new Date());
     }, 1000);
 
-    return () => {
-      clearInterval(timer);
-    };
+    return () => clearInterval(timer);
   }, []);
 
   const formatTime = (date) =>
@@ -96,101 +101,163 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
     });
 
   useEffect(() => {
-    let retryTimeout;
+    let isMounted = true;
 
     const connect = () => {
-      const ws = new WebSocket(wsUrl);
+      if (!isMounted) return;
+
+      if (retryCountRef.current >= MAX_RETRIES) {
+        console.error(`[WS] Max retries (${MAX_RETRIES}) reached`);
+
+        if (!hasShownMaxRetryToast.current) {
+          hasShownMaxRetryToast.current = true;
+          showToast(
+            "Koneksi gagal. Halaman akan di-refresh otomatis dalam 5 detik...",
+            "error"
+          );
+
+          setTimeout(() => {
+            window.location.reload();
+          }, 5000);
+        }
+        return;
+      }
+
+      if (retryCountRef.current > 0) {
+        console.log(
+          `[WS] Retry attempt ${retryCountRef.current}/${MAX_RETRIES}`
+        );
+        showToast(
+          `Mencoba koneksi ulang... (${retryCountRef.current}/${MAX_RETRIES})`,
+          "warning"
+        );
+      }
+
+      console.log("[WS] Connecting to:", WS_URL);
+      const ws = new WebSocket(WS_URL);
       wsRef.current = ws;
 
       ws.onopen = () => {
         console.log("[WS] Connected");
+
+        if (retryCountRef.current > 0) {
+          showToast("Koneksi berhasil dipulihkan!", "success");
+        }
+        retryCountRef.current = 0;
+        hasShownMaxRetryToast.current = false;
+
         processedCallsRef.current.clear();
       };
 
       ws.onmessage = (event) => {
-        const message = JSON.parse(event.data);
+        if (!isMounted) return;
 
-        if (message.type !== "queue_update") return;
+        try {
+          const message = JSON.parse(event.data);
 
-        setQueues(message.data || []);
+          if (message.type !== "queue_update") return;
 
-        if (!message.currently_playing) {
-          setCurrentlyPlaying(null);
-          setActiveLoket(null);
-          return;
-        }
+          setQueues(message.data || []);
 
-        const current = message.currently_playing;
-        const playKey = `${current.id}_${current.last_called_at}`;
-
-        if (processedCallsRef.current.has(playKey)) {
-          return;
-        }
-
-        processedCallsRef.current.add(playKey);
-
-        setCurrentlyPlaying(current);
-        setActiveLoket(current.service_name);
-
-        if (!current.should_play_audio) {
-          console.log(
-            `[AUDIO] Muted - updating card for ${current.ticket_code}`
-          );
-          updateServiceDisplay(current.service_id, current.ticket_code);
-
-          const timeout = setTimeout(() => {
+          if (!message.currently_playing) {
+            setCurrentlyPlaying(null);
             setActiveLoket(null);
-          }, 3000);
-          timeoutRefs.current.push(timeout);
-          return;
-        }
+            return;
+          }
 
-        if (
-          Array.isArray(current.audio_paths) &&
-          current.audio_paths.length > 0
-        ) {
-          console.log(`[AUDIO] Enqueuing audio for ${current.ticket_code}`);
-          enqueueAudio(current, () => {
-            console.log(
-              `[AUDIO] Finished playing, updating card for service ${current.service_id}`
-            );
+          const current = message.currently_playing;
+          const playKey = `${current.id}_${current.last_called_at}`;
+
+          if (processedCallsRef.current.has(playKey)) {
+            console.log(`[WS] Already processed: ${playKey}`);
+            return;
+          }
+
+          processedCallsRef.current.add(playKey);
+          console.log(`[WS] New call: ${current.ticket_code} (${playKey})`);
+
+          setCurrentlyPlaying(current);
+          setActiveLoket(current.service_name);
+
+          if (activeLoketTimeoutRef.current) {
+            clearTimeout(activeLoketTimeoutRef.current);
+          }
+
+          if (!current.should_play_audio) {
+            console.log(`[AUDIO] Muted for ${current.ticket_code}`);
             updateServiceDisplay(current.service_id, current.ticket_code);
 
-            const timeout = setTimeout(() => {
-              setActiveLoket(null);
+            activeLoketTimeoutRef.current = setTimeout(() => {
+              if (isMounted) setActiveLoket(null);
             }, 3000);
-            timeoutRefs.current.push(timeout);
-          });
-        } else {
-          updateServiceDisplay(current.service_id, current.ticket_code);
+            return;
+          }
 
-          const timeout = setTimeout(() => {
-            setActiveLoket(null);
-          }, 3000);
-          timeoutRefs.current.push(timeout);
+          if (
+            Array.isArray(current.audio_paths) &&
+            current.audio_paths.length > 0
+          ) {
+            console.log(`[AUDIO] Enqueuing: ${current.ticket_code}`);
+            enqueueAudio(current, () => {
+              if (!isMounted) return;
+              console.log(`[AUDIO] Finished: ${current.ticket_code}`);
+              updateServiceDisplay(current.service_id, current.ticket_code);
+
+              activeLoketTimeoutRef.current = setTimeout(() => {
+                if (isMounted) setActiveLoket(null);
+              }, 3000);
+            });
+          } else {
+            updateServiceDisplay(current.service_id, current.ticket_code);
+            activeLoketTimeoutRef.current = setTimeout(() => {
+              if (isMounted) setActiveLoket(null);
+            }, 3000);
+          }
+        } catch (err) {
+          console.error("[WS] Message parse error:", err);
         }
       };
 
       ws.onerror = (err) => {
-        console.error("[WS] Error", err);
+        console.error("[WS] Error:", err);
       };
 
-      ws.onclose = () => {
-        console.warn("[WS] Closed, reconnecting...");
-        retryTimeout = setTimeout(connect, 3000);
+      ws.onclose = (event) => {
+        console.warn("[WS] Closed:", event.code, event.reason);
+        wsRef.current = null;
+
+        if (isMounted && retryCountRef.current < MAX_RETRIES) {
+          retryCountRef.current++;
+
+          const delay = Math.min(
+            1000 * Math.pow(2, retryCountRef.current - 1),
+            10000
+          );
+
+          console.log(
+            `[WS] Reconnecting in ${delay}ms (attempt ${retryCountRef.current}/${MAX_RETRIES})`
+          );
+          reconnectTimeoutRef.current = setTimeout(connect, delay);
+        }
       };
     };
 
     connect();
 
     return () => {
-      clearTimeout(retryTimeout);
+      isMounted = false;
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+
       if (wsRef.current) {
+        wsRef.current.onclose = null;
         wsRef.current.close();
         wsRef.current = null;
       }
     };
-  }, [wsUrl]);
+  }, []);
 
   useEffect(() => {
     if (activeLoket && activeCardRef.current && scrollContainerRef.current) {
@@ -201,8 +268,6 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
           inline: "nearest",
         });
       }, 100);
-
-      timeoutRefs.current.push(timeout);
 
       return () => clearTimeout(timeout);
     }
@@ -217,42 +282,46 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
 
   const enqueueAudio = (queueData, onFinishCallback) => {
     audioQueueRef.current.push({ queueData, onFinishCallback });
+    console.log(
+      `[AUDIO] Queue length: ${audioQueueRef.current.length}, isPlaying: ${isPlayingRef.current}`
+    );
     playNextAudio();
   };
 
   const playNextAudio = async () => {
     if (isPlayingRef.current) {
-      console.log("[AUDIO] Already playing, skipping...");
+      console.log("[AUDIO] Already playing, waiting...");
       return;
     }
 
-    if (audioQueueRef.current.length === 0) return;
+    if (audioQueueRef.current.length === 0) {
+      console.log("[AUDIO] Queue empty");
+      return;
+    }
 
     const next = audioQueueRef.current.shift();
     const { queueData, onFinishCallback } = next;
 
     isPlayingRef.current = true;
-
-    console.log(`[AUDIO] Playing ${queueData.ticket_code}`);
+    console.log(`[AUDIO] START playing: ${queueData.ticket_code}`);
 
     try {
       for (const path of queueData.audio_paths) {
         await playAudio(`${BASE_AUDIO_URL}/${path}`);
       }
-      console.log(`[AUDIO] Finished playing ${queueData.ticket_code}`);
+      console.log(`[AUDIO] DONE playing: ${queueData.ticket_code}`);
 
       if (onFinishCallback) {
         onFinishCallback();
       }
     } catch (err) {
-      console.error("[AUDIO] Playback error", err);
+      console.error("[AUDIO] Playback error:", err);
     } finally {
       isPlayingRef.current = false;
 
-      const timeout = setTimeout(() => {
+      setTimeout(() => {
         playNextAudio();
       }, 500);
-      timeoutRefs.current.push(timeout);
     }
   };
 
@@ -265,22 +334,28 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
 
       const audio = new Audio(src);
       currentAudioRef.current = audio;
+
       audio.onended = () => {
         currentAudioRef.current = null;
         resolve();
       };
 
-      audio.onerror = () => {
-        console.error(`[AUDIO] Failed to load: ${src}`);
+      audio.onerror = (err) => {
+        console.error(`[AUDIO] Failed to load: ${src}`, err);
         currentAudioRef.current = null;
         resolve();
       };
 
-      audio.play().catch((err) => {
-        console.error(`[AUDIO] Play error: ${err.message}`);
-        currentAudioRef.current = null;
-        resolve();
-      });
+      audio
+        .play()
+        .then(() => {
+          console.log(`[AUDIO] Playing: ${src}`);
+        })
+        .catch((err) => {
+          console.error(`[AUDIO] Play error: ${err.message}`);
+          currentAudioRef.current = null;
+          resolve();
+        });
     });
 
   const handleAudioInteraction = () => {
@@ -334,7 +409,7 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
 
     return a.service_id - b.service_id;
   });
-
+  const formatText = (text) => text?.replace(/_/g, " ").toUpperCase();
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col">
       <header className="bg-slate-900 border-b border-slate-800 px-4 md:px-8 py-4 shadow-lg">
@@ -397,7 +472,7 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
                   <div className="mt-6 bg-white/20 backdrop-blur px-8 py-3 rounded-xl">
                     <p className="text-xs text-white/80">Loket</p>
                     <p className="text-3xl font-bold">
-                      {currentlyPlaying.loket}
+                      {formatText(currentlyPlaying.loket)}
                     </p>
                   </div>
                 </>
@@ -458,16 +533,13 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
                         ? "bg-emerald-600 border-emerald-400 shadow-xl shadow-emerald-500/50 scale-105"
                         : "bg-slate-900 border-slate-800 hover:border-slate-700"
                     }`}
-                    style={{
-                      transition: "all 500ms ease",
-                    }}
                   >
                     <div
                       className={`inline-block px-3 py-1 rounded-full text-xs font-semibold mb-3 ${
                         isActive ? "bg-white/20" : "bg-slate-800"
                       }`}
                     >
-                      LOKET {service.loket}
+                      LOKET {formatText(service.loket)}
                     </div>
                     <p className="text-xs font-medium mb-3 truncate text-slate-300">
                       {service.service_name}
@@ -512,8 +584,8 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
                   </p>
                   <div className="mt-8 bg-white/20 backdrop-blur px-10 py-4 rounded-xl">
                     <p className="text-sm text-white/80">Loket</p>
-                    <p className="text-5xl font-bold">
-                      {currentlyPlaying.loket}
+                    <p className="text-3xl font-bold">
+                      {formatText(currentlyPlaying.loket)}
                     </p>
                   </div>
                 </>
@@ -589,7 +661,7 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
                           isActive ? "bg-white/20" : "bg-slate-800"
                         }`}
                       >
-                        LOKET {service.loket}
+                        LOKET {formatText(service.loket)}
                       </div>
                       <p className="text-sm font-medium mb-3 truncate text-slate-300">
                         {service.service_name}
@@ -610,6 +682,7 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
           </section>
         </div>
       </main>
+
       <footer className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 py-3 overflow-hidden shadow-lg">
         <div className="marquee-wrapper">
           <div className="marquee-content">
@@ -647,7 +720,6 @@ const DisplayAntrian = ({ wsUrl = DEFAULT_WS_URL }) => {
           animation-play-state: paused;
         }
 
-        /* Custom Scrollbar */
         .scrollbar-thin::-webkit-scrollbar {
           width: 8px;
         }

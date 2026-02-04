@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { queueService } from "../services/api";
+import { showToast } from "../utils/toast";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9080";
 const BASE_AUDIO_URL = API_URL;
@@ -9,6 +10,7 @@ const WS_URL = `${wsProtocol}://${API_URL.replace(
   /^https?:\/\//,
   ""
 )}/ws/queue`;
+const MAX_RETRIES = 5;
 
 export default function CallerService() {
   const { serviceId } = useParams();
@@ -30,139 +32,265 @@ export default function CallerService() {
   const isPlayingRef = useRef(false);
   const processedCallsRef = useRef(new Set());
   const currentAudioRef = useRef(null);
+  const reconnectTimeoutRef = useRef(null);
+  const retryCountRef = useRef(0);
+  const hasShownMaxRetryToast = useRef(false);
 
   const token = sessionStorage.getItem("token");
 
   useEffect(() => {
+    return () => {
+      console.log("[CallerService] Cleanup on unmount");
+
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.src = "";
+        currentAudioRef.current = null;
+      }
+
+      audioQueueRef.current = [];
+      isPlayingRef.current = false;
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+
+      processedCallsRef.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
     audioQueueRef.current = [];
     processedCallsRef.current.clear();
     isPlayingRef.current = false;
 
+    const connectWebSocket = () => {
+      if (!isMounted) return;
+
+      if (retryCountRef.current >= MAX_RETRIES) {
+        console.error(`[WS] Max retries (${MAX_RETRIES}) reached`);
+
+        if (!hasShownMaxRetryToast.current) {
+          hasShownMaxRetryToast.current = true;
+          showToast(
+            "Koneksi gagal. Halaman akan di-refresh otomatis dalam 5 detik...",
+            "error"
+          );
+
+          setTimeout(() => {
+            window.location.reload();
+          }, 5000);
+        }
+        return;
+      }
+
+      if (retryCountRef.current > 0) {
+        console.log(
+          `[WS] Retry attempt ${retryCountRef.current}/${MAX_RETRIES}`
+        );
+        showToast(
+          `Mencoba koneksi ulang... (${retryCountRef.current}/${MAX_RETRIES})`,
+          "warning"
+        );
+      }
+
+      console.log("[WS] Connecting to queue updates");
+      const ws = new WebSocket(WS_URL);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        console.log("[WS] Connected");
+
+        if (retryCountRef.current > 0) {
+          showToast("Koneksi berhasil dipulihkan!", "success");
+        }
+        retryCountRef.current = 0;
+        hasShownMaxRetryToast.current = false;
+
+        processedCallsRef.current.clear();
+      };
+
+      ws.onmessage = (event) => {
+        if (!isMounted) return;
+
+        try {
+          const message = JSON.parse(event.data);
+
+          if (message.type !== "queue_update") return;
+
+          const stats = message.service_stats?.[serviceId];
+          if (stats) {
+            setWaitingCount(stats.waiting_count);
+            setHasNext(stats.has_next);
+          } else {
+            setWaitingCount(0);
+            setHasNext(false);
+          }
+
+          const serviceTickets = (message.data || []).filter(
+            (q) => q.service_id === parseInt(serviceId)
+          );
+
+          const called = serviceTickets.find((q) => q.status === "called");
+          const waiting = serviceTickets.filter((q) => q.status === "waiting");
+
+          setCurrentTicket(called || null);
+          setNextTicket(waiting[0] || null);
+
+          if (
+            called &&
+            called.service_id === parseInt(serviceId) &&
+            called.last_called_at
+          ) {
+            const playKey = `${called.id}_${called.last_called_at}`;
+
+            if (processedCallsRef.current.has(playKey)) {
+              console.log(`[AUDIO] Already processed: ${playKey}`);
+              return;
+            }
+
+            if (
+              Array.isArray(called.audio_paths) &&
+              called.audio_paths.length > 0
+            ) {
+              console.log(`[AUDIO] Enqueuing audio for ${called.ticket_code}`);
+              processedCallsRef.current.add(playKey);
+              enqueueAudio(called);
+            }
+          }
+        } catch (err) {
+          console.error("[WS] Message parse error:", err);
+        }
+      };
+
+      ws.onerror = (err) => {
+        console.error("[WS] Error:", err);
+      };
+
+      ws.onclose = (event) => {
+        console.warn("[WS] Closed:", event.code, event.reason);
+        wsRef.current = null;
+
+        if (isMounted && retryCountRef.current < MAX_RETRIES) {
+          retryCountRef.current++;
+
+          const delay = Math.min(
+            1000 * Math.pow(2, retryCountRef.current - 1),
+            10000
+          );
+
+          console.log(
+            `[WS] Reconnecting in ${delay}ms (attempt ${retryCountRef.current}/${MAX_RETRIES})`
+          );
+          reconnectTimeoutRef.current = setTimeout(connectWebSocket, delay);
+        }
+      };
+    };
+
     connectWebSocket();
 
     return () => {
-      wsRef.current?.close();
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.currentTime = 0;
-        currentAudioRef.current = null;
+      isMounted = false;
+
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.close();
+        wsRef.current = null;
       }
     };
   }, [serviceId]);
 
-  const connectWebSocket = () => {
-    const ws = new WebSocket(WS_URL);
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      console.log("[WS] Connected to queue updates");
-    };
-
-    ws.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-
-      if (message.type !== "queue_update") return;
-
-      const stats = message.service_stats?.[serviceId];
-      if (stats) {
-        setWaitingCount(stats.waiting_count);
-        setHasNext(stats.has_next);
-      } else {
-        setWaitingCount(0);
-        setHasNext(false);
-      }
-
-      const serviceTickets = (message.data || []).filter(
-        (q) => q.service_id === parseInt(serviceId)
-      );
-
-      const called = serviceTickets.find((q) => q.status === "called");
-      const waiting = serviceTickets.filter((q) => q.status === "waiting");
-
-      setCurrentTicket(called || null);
-      setNextTicket(waiting[0] || null);
-
-      if (
-        called &&
-        called.service_id === parseInt(serviceId) &&
-        called.last_called_at
-      ) {
-        const playKey = `${called.id}_${called.last_called_at}`;
-
-        if (processedCallsRef.current.has(playKey)) {
-          return;
-        }
-
-        if (
-          Array.isArray(called.audio_paths) &&
-          called.audio_paths.length > 0
-        ) {
-          console.log(`[AUDIO] Enqueuing audio for ${called.ticket_code}`);
-          processedCallsRef.current.add(playKey);
-          enqueueAudio(called);
-        }
-      }
-
-      console.log("WS message data:", message.data);
-    };
-
-    ws.onerror = (err) => {
-      console.error("[WS] Error", err);
-    };
-
-    ws.onclose = () => {
-      console.warn("[WS] Closed, reconnecting in 3s...");
-      setTimeout(connectWebSocket, 3000);
-    };
-  };
-
   const enqueueAudio = (queueData) => {
     audioQueueRef.current.push(queueData);
+    console.log(
+      `[AUDIO] Queue length: ${audioQueueRef.current.length}, isPlaying: ${isPlayingRef.current}`
+    );
     playNextAudio();
   };
 
   const playNextAudio = async () => {
-    if (isPlayingRef.current || audioQueueRef.current.length === 0) {
+    if (isPlayingRef.current) {
+      console.log("[AUDIO] Already playing, waiting...");
+      return;
+    }
+
+    if (audioQueueRef.current.length === 0) {
+      console.log("[AUDIO] Queue empty");
       return;
     }
 
     const next = audioQueueRef.current.shift();
+
     if (next.service_id !== parseInt(serviceId)) {
+      console.log(
+        `[AUDIO] Skipping audio for different service: ${next.service_id}`
+      );
       isPlayingRef.current = false;
       playNextAudio();
       return;
     }
-    isPlayingRef.current = true;
 
-    console.log(`[AUDIO] Playing ${next.ticket_code}`);
+    isPlayingRef.current = true;
+    console.log(`[AUDIO] START playing: ${next.ticket_code}`);
 
     try {
       for (const path of next.audio_paths) {
         await playAudio(`${BASE_AUDIO_URL}/${path}`);
       }
-      console.log(`[AUDIO] Finished playing ${next.ticket_code}`);
+      console.log(`[AUDIO] DONE playing: ${next.ticket_code}`);
     } catch (err) {
-      console.error("[AUDIO] Playback error", err);
+      console.error("[AUDIO] Playback error:", err);
     } finally {
       isPlayingRef.current = false;
       setTimeout(playNextAudio, 500);
     }
   };
-  console.log(nextTicket);
 
   const playAudio = (src) =>
     new Promise((resolve) => {
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current.src = "";
+      }
+
       const audio = new Audio(src);
       currentAudioRef.current = audio;
-      audio.onended = resolve;
-      audio.onerror = () => {
-        console.error(`[AUDIO] Failed to load: ${src}`);
+
+      audio.onended = () => {
+        currentAudioRef.current = null;
         resolve();
       };
-      audio.play().catch((err) => {
-        console.error(`[AUDIO] Play error: ${err.message}`);
+
+      audio.onerror = (err) => {
+        console.error(`[AUDIO] Failed to load: ${src}`, err);
+        currentAudioRef.current = null;
         resolve();
-      });
+      };
+
+      audio
+        .play()
+        .then(() => {
+          console.log(`[AUDIO] Playing: ${src}`);
+        })
+        .catch((err) => {
+          console.error(`[AUDIO] Play error: ${err.message}`);
+          currentAudioRef.current = null;
+          resolve();
+        });
     });
 
   const handleAudioInteraction = () => {
@@ -185,11 +313,16 @@ export default function CallerService() {
       );
 
       if (!res.success) {
-        alert(res.error || "Gagal memanggil antrian");
+        showToast(res.error || "Gagal memanggil antrian", "error");
+      } else {
+        showToast("Antrian berhasil dipanggil", "success");
       }
     } catch (err) {
       console.error("Error calling next:", err);
-      alert(err.response?.data?.error || "Gagal memanggil antrian");
+      showToast(
+        err.response?.data?.error || "Gagal memanggil antrian",
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -197,11 +330,6 @@ export default function CallerService() {
 
   const handleSkip = async () => {
     if (loading || !hasNext) return;
-
-    const confirm = window.confirm(
-      `Skip antrian ${currentTicket?.ticket_code || "ini"}?`
-    );
-    if (!confirm) return;
 
     try {
       setLoading(true);
@@ -212,22 +340,25 @@ export default function CallerService() {
       );
 
       if (!res.success) {
-        alert(res.error || "Gagal skip antrian");
+        showToast(res.error || "Gagal skip antrian", "error");
+      } else {
+        showToast("Antrian berhasil di-skip", "success");
       }
     } catch (err) {
       console.error("Error skipping:", err);
-      alert(err.response?.data?.error || "Gagal skip antrian");
+      showToast(err.response?.data?.error || "Gagal skip antrian", "error");
     } finally {
       setLoading(false);
     }
   };
+
   const handleRecall = async () => {
     if (!currentTicket || loading) return;
 
-    const confirm = window.confirm(
+    const confirmed = window.confirm(
       `Recall antrian ${currentTicket.ticket_code}?`
     );
-    if (!confirm) return;
+    if (!confirmed) return;
 
     try {
       setLoading(true);
@@ -235,15 +366,18 @@ export default function CallerService() {
       const res = await queueService.recall(currentTicket.id, token);
 
       if (!res.success) {
-        alert(res.error || "Gagal recall antrian");
+        showToast(res.error || "Gagal recall antrian", "error");
+      } else {
+        showToast("Antrian berhasil di-recall", "success");
       }
     } catch (err) {
       console.error("Error recalling:", err);
-      alert(err.response?.data?.error || "Gagal recall antrian");
+      showToast(err.response?.data?.error || "Gagal recall antrian", "error");
     } finally {
       setLoading(false);
     }
   };
+  const formatText = (text) => text?.replace(/_/g, " ").toUpperCase();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -274,7 +408,7 @@ export default function CallerService() {
                   {serviceData?.nama_service || "Caller"}
                 </h1>
                 <p className="text-sm text-slate-400">
-                  {unitInfo?.name} • Loket {serviceData?.loket}
+                  {unitInfo?.name} • Loket {formatText(serviceData?.loket)}
                 </p>
               </div>
             </div>
@@ -323,8 +457,8 @@ export default function CallerService() {
                   </p>
                   <div className="inline-block bg-white/20 backdrop-blur px-8 py-4 rounded-2xl">
                     <p className="text-white/80 text-xs mb-1">Loket</p>
-                    <p className="text-4xl md:text-5xl font-bold text-white">
-                      {currentTicket.loket}
+                    <p className="text-3xl font-bold text-white">
+                      {formatText(currentTicket.loket)}
                     </p>
                   </div>
                 </div>

@@ -33,17 +33,31 @@ export const showToast = (message, type = "success") => {
       <div>
         <div class="font-semibold">${message}</div>
       </div>
+      <button class="btn btn-sm btn-circle btn-ghost ml-auto" onclick="this.closest('.toast').remove()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
   `;
 
   document.body.appendChild(toast);
 
-  setTimeout(() => {
-    toast.classList.add("opacity-0", "transition-opacity", "duration-300");
-    setTimeout(() => {
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast);
-      }
-    }, 300);
+  // Auto remove setelah 4 detik
+  const autoRemoveTimeout = setTimeout(() => {
+    if (document.body.contains(toast)) {
+      toast.classList.add("opacity-0", "transition-opacity", "duration-300");
+      setTimeout(() => {
+        if (document.body.contains(toast)) {
+          document.body.removeChild(toast);
+        }
+      }, 300);
+    }
   }, 4000);
+
+  // Clear timeout jika user manual close
+  const closeButton = toast.querySelector("button");
+  closeButton.addEventListener("click", () => {
+    clearTimeout(autoRemoveTimeout);
+  });
 };

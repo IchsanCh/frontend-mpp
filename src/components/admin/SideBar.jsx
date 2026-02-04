@@ -201,7 +201,7 @@ export default function SideBar({ children }) {
                   </div>
                 </li>
                 <div className="divider my-1"></div>
-                <li>
+                {/* <li>
                   <Link
                     to="/admin/profile"
                     className="gap-2"
@@ -221,7 +221,7 @@ export default function SideBar({ children }) {
                     <span className="font-medium">Pengaturan</span>
                   </Link>
                 </li>
-                <div className="divider my-1"></div>
+                <div className="divider my-1"></div> */}
                 <li>
                   <button
                     type="button"
@@ -447,7 +447,7 @@ export default function SideBar({ children }) {
                 tabIndex={0}
                 className="dropdown-content menu bg-base-100 rounded-box z-[1] w-full p-2 shadow-lg border border-base-300 mb-2"
               >
-                <li>
+                {/* <li>
                   <Link
                     to="/admin/profile"
                     className="gap-2"
@@ -467,7 +467,7 @@ export default function SideBar({ children }) {
                     <span className="font-medium">Pengaturan</span>
                   </Link>
                 </li>
-                <div className="divider my-1"></div>
+                <div className="divider my-1"></div> */}
                 <li>
                   <button
                     onClick={handleLogout}

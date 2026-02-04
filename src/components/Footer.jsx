@@ -35,7 +35,7 @@ export default function Footer() {
           </nav>
         </div>
 
-        <div className="border-t border-base-300 py-6 text-center">
+        <div className="border-t border-base-300 py-4 text-center">
           <p className="text-white/80">
             Copyright © {new Date().getFullYear()} {APP_NAME}. All rights
             reserved.

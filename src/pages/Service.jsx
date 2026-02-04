@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { authService, serviceService, unitService } from "../services/api";
 import Pagination from "../components/admin/Pagination";
+import { showToast } from "../utils/toast";
 
 export default function ServiceManagement() {
   const [services, setServices] = useState([]);
@@ -58,39 +59,6 @@ export default function ServiceManagement() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const showToast = (message, type = "success") => {
-    const toast = document.createElement("div");
-    toast.className = "toast toast-top toast-end z-50";
-
-    const alertClass = type === "error" ? "alert-error" : "alert-success";
-    const iconPath =
-      type === "error"
-        ? "M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-        : "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z";
-
-    toast.innerHTML = `
-      <div class="alert ${alertClass} shadow-lg">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${iconPath}" />
-        </svg>
-        <div>
-          <div class="font-semibold">${message}</div>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.classList.add("opacity-0", "transition-opacity", "duration-300");
-      setTimeout(() => {
-        if (document.body.contains(toast)) {
-          document.body.removeChild(toast);
-        }
-      }, 300);
-    }, 4000);
   };
 
   const validateForm = () => {
