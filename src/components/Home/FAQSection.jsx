@@ -1,9 +1,8 @@
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 
 export default function FAQSection() {
   const STEP = 5;
   const [visibleCount, setVisibleCount] = useState(STEP);
-  const [maxHeight, setMaxHeight] = useState(0);
   const listRef = useRef(null);
 
   const faqs = [
@@ -80,9 +79,11 @@ export default function FAQSection() {
         "Ya. SANDIGI membantu memastikan pelayanan di MPP dilakukan secara adil, transparan, dan sesuai urutan antrian.",
     },
   ];
-  useLayoutEffect(() => {
+
+  useEffect(() => {
+    // Reset scroll position when items change
     if (listRef.current) {
-      setMaxHeight(listRef.current.scrollHeight);
+      listRef.current.scrollTop = 0;
     }
   }, [visibleCount]);
 
@@ -95,6 +96,7 @@ export default function FAQSection() {
       setVisibleCount(faqs.length);
     }
   };
+
   const renderAnswer = (text) => {
     const blocks = text.split("\n\n").filter(Boolean);
 
@@ -135,26 +137,16 @@ export default function FAQSection() {
           </p>
         </div>
         <div className="max-w-3xl mx-auto space-y-4">
-          <div
-            className="overflow-hidden transition-all duration-500 ease-in-out"
-            style={{ maxHeight }}
-          >
-            <div ref={listRef}>
-              {faqs.slice(0, visibleCount).map((faq, index) => (
-                <div
-                  key={index}
-                  className="collapse collapse-arrow bg-base-300 mb-4"
-                >
-                  <input type="radio" name="faq-accordion" />
-                  <div className="collapse-title font-medium">
-                    {faq.question}
-                  </div>
-                  <div className="collapse-content">
-                    {renderAnswer(faq.answer)}
-                  </div>
+          <div ref={listRef} className="space-y-4">
+            {faqs.slice(0, visibleCount).map((faq, index) => (
+              <div key={index} className="collapse collapse-arrow bg-base-300">
+                <input type="radio" name="faq-accordion" />
+                <div className="collapse-title font-medium">{faq.question}</div>
+                <div className="collapse-content">
+                  {renderAnswer(faq.answer)}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
 
           <div className="text-center pt-6">

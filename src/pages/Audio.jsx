@@ -325,6 +325,7 @@ export default function AudioManagement() {
                         {new Date(audio.created_at).toLocaleDateString(
                           "id-ID",
                           {
+                            timeZone: "UTC",
                             day: "2-digit",
                             month: "short",
                             year: "numeric",
