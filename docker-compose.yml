@@ -1,0 +1,17 @@
+services:
+  sandigi-fe:
+    build: .
+    container_name: sandigi-fe
+    environment:
+      - VIRTUAL_HOST=sandigi.lotusaja.com
+      - LETSENCRYPT_HOST=sandigi.lotusaja.com
+      - LETSENCRYPT_EMAIL=info.lotusaja@gmail.com
+    expose:
+      - "80"
+    networks:
+      - nginx-proxy
+    restart: unless-stopped
+
+networks:
+  nginx-proxy:
+    external: true

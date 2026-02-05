@@ -140,7 +140,7 @@ export default function FAQSection() {
           <div ref={listRef} className="space-y-4">
             {faqs.slice(0, visibleCount).map((faq, index) => (
               <div key={index} className="collapse collapse-arrow bg-base-300">
-                <input type="radio" name="faq-accordion" />
+                <input type="radio" name="faq-accordion" aria-label={faq.question}/>
                 <div className="collapse-title font-medium">{faq.question}</div>
                 <div className="collapse-content">
                   {renderAnswer(faq.answer)}

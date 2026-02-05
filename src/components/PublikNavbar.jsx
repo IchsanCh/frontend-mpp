@@ -5,7 +5,12 @@ const APP_NAME = import.meta.env.VITE_APP_NAME || "SANDIGI";
 export default function PublikNavbar() {
   return (
     <div className="drawer">
-      <input id="nav-drawer" type="checkbox" className="drawer-toggle" />
+      <input
+        id="nav-drawer"
+        type="checkbox"
+        aria-label="Navbar"
+        className="drawer-toggle"
+      />
       <div className="drawer-content">
         <div className="navbar lg:px-16 fixed top-0 z-40 bg-base-100 border-b border-base-300">
           <div className="navbar-start">
