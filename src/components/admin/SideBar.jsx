@@ -16,6 +16,7 @@ import {
   Volume2,
   BellElectricIcon,
   BellRing,
+  CircleQuestionMark,
 } from "lucide-react";
 import { useState } from "react";
 import logo from "../../assets/images/logo.webp";
@@ -72,6 +73,12 @@ export default function SideBar({ children }) {
         title: "Audio",
         icon: Volume2,
         description: "Management Audio",
+      },
+      {
+        to: "/admin/faq",
+        title: "FAQ",
+        icon: CircleQuestionMark,
+        description: "Management FAQ",
       },
       // {
       //   title: "Laporan",

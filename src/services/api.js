@@ -67,65 +67,6 @@ export const authService = {
     return !!this.getToken();
   },
 };
-
-// export const queueService = {
-//   async takeQueue(unitId, serviceId) {
-//     const token = authService.getToken();
-//     const response = await fetch(`${API_URL}/api/queue/take`, {
-//       method: "POST",
-//       headers: {
-//         "Content-Type": "application/json",
-//         Authorization: `Bearer ${token}`,
-//       },
-//       body: JSON.stringify({ unit_id: unitId, service_id: serviceId }),
-//     });
-
-//     const data = await response.json();
-
-//     if (!response.ok) {
-//       throw new Error(data.error || "Gagal mengambil nomor antrian");
-//     }
-
-//     return data;
-//   },
-
-//   async getServiceQueue(unitId, serviceId) {
-//     const token = authService.getToken();
-//     const response = await fetch(
-//       `${API_URL}/api/queue/unit/${unitId}/service/${serviceId}`,
-//       {
-//         headers: {
-//           Authorization: `Bearer ${token}`,
-//         },
-//       }
-//     );
-
-//     const data = await response.json();
-
-//     if (!response.ok) {
-//       throw new Error(data.error || "Gagal mengambil data antrian");
-//     }
-
-//     return data;
-//   },
-
-//   async getGlobalQueue() {
-//     const token = authService.getToken();
-//     const response = await fetch(`${API_URL}/api/queue/global`, {
-//       headers: {
-//         Authorization: `Bearer ${token}`,
-//       },
-//     });
-
-//     const data = await response.json();
-
-//     if (!response.ok) {
-//       throw new Error(data.error || "Gagal mengambil data antrian global");
-//     }
-
-//     return data;
-//   },
-// };
 export const unitService = {
   /**
    * Get all units with pagination
@@ -1099,5 +1040,150 @@ export const dashboardService = {
 
     const result = await response.json();
     return result.data;
+  },
+};
+
+export const faqService = {
+  /**
+   * Get all FAQs with pagination (Admin)
+   * @param {Object} params - { isActive, search, page, limit }
+   * @returns {Promise<{success: boolean, data: Array, pagination: Object}>}
+   */
+  async getAll(params = {}) {
+    const token = authService.getToken();
+
+    const queryParams = new URLSearchParams();
+
+    if (params.isActive) {
+      queryParams.append("is_active", params.isActive);
+    }
+    if (params.search) {
+      queryParams.append("search", params.search);
+    }
+    if (params.page) {
+      queryParams.append("page", params.page);
+    }
+    if (params.limit) {
+      queryParams.append("limit", params.limit);
+    }
+
+    const queryString = queryParams.toString();
+    const url = `${API_URL}/api/faqs/paginate${
+      queryString ? `?${queryString}` : ""
+    }`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal mengambil data FAQ");
+    }
+    return data;
+  },
+
+  /**
+   * Get all active FAQs (Public)
+   * @returns {Promise<{success: boolean, data: Array}>}
+   */
+  async getAllPublic() {
+    const response = await fetch(`${API_URL}/api/faqs`);
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal mengambil data FAQ");
+    }
+    return data;
+  },
+
+  /**
+   * Get FAQ by ID
+   * @param {number|string} id - FAQ ID
+   */
+  async getById(id) {
+    const token = authService.getToken();
+    const response = await fetch(`${API_URL}/api/faqs/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal mengambil data FAQ");
+    }
+    return data;
+  },
+
+  /**
+   * Create new FAQ
+   * @param {Object} faqData - { question, answer, is_active, sort_order }
+   */
+  async create(faqData) {
+    const token = authService.getToken();
+
+    const response = await fetch(`${API_URL}/api/faqs`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(faqData),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal membuat FAQ");
+    }
+    return data;
+  },
+
+  /**
+   * Update FAQ
+   * @param {number|string} id - FAQ ID
+   * @param {Object} faqData - { question?, answer?, is_active?, sort_order? }
+   */
+  async update(id, faqData) {
+    const token = authService.getToken();
+
+    const response = await fetch(`${API_URL}/api/faqs/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(faqData),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal mengupdate FAQ");
+    }
+    return data;
+  },
+
+  /**
+   * Hard delete FAQ (permanent deletion)
+   * @param {number|string} id - FAQ ID
+   */
+  async hardDelete(id) {
+    const token = authService.getToken();
+
+    const response = await fetch(`${API_URL}/api/faqs/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal menghapus FAQ");
+    }
+    return data;
   },
 };

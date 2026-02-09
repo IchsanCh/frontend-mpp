@@ -22,6 +22,7 @@ import UnitDashboard from "./pages/UnitDashboard";
 import { authService } from "./services/api";
 import NotFound from "./pages/NotFound";
 import UnitReportManagement from "./pages/UnitReports";
+import FAQManagement from "./pages/FAQ";
 
 export default function App() {
   return (
@@ -122,6 +123,16 @@ export default function App() {
           <ProtectedRoute>
             <AdminLayout title="Laporan Analitik">
               <ReportManagement />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/faq"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="Management FAQ">
+              <FAQManagement />
             </AdminLayout>
           </ProtectedRoute>
         }
