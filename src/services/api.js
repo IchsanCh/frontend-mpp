@@ -130,7 +130,7 @@ export const unitService = {
 
   /**
    * Create new unit
-   * @param {Object} unitData - { code, nama_unit, is_active }
+   * @param {Object} unitData - { code, nama_unit, is_active, main_display, audio_file }
    */
   async create(unitData) {
     const token = authService.getToken();
@@ -158,7 +158,7 @@ export const unitService = {
   /**
    * Update unit
    * @param {number|string} id - Unit ID
-   * @param {Object} unitData - { code?, nama_unit?, is_active? }
+   * @param {Object} unitData - { code?, nama_unit?, is_active?, main_display?, audio_file? }
    */
   async update(id, unitData) {
     const token = authService.getToken();
@@ -234,6 +234,7 @@ export const unitService = {
     }
     return data;
   },
+
   async getServicesStatus(unitId) {
     const token = authService.getToken();
 
@@ -431,47 +432,72 @@ export const userService = {
   },
 };
 export const serviceService = {
+  /**
+   * Get all services with pagination
+   * @param {Object} params - { isActive, search, page, limit }
+   * @returns {Promise<{success: boolean, data: Array, pagination: Object}>}
+   */
   async getAll(params = {}) {
-    const queryParams = new URLSearchParams();
-    if (params.isActive) queryParams.append("is_active", params.isActive);
-    if (params.search) queryParams.append("search", params.search);
-    if (params.page) queryParams.append("page", params.page);
-    if (params.limit) queryParams.append("limit", params.limit);
-
     const token = authService.getToken();
-    if (!token) {
-      throw new Error("Token tidak ditemukan, silakan login kembali");
+
+    const queryParams = new URLSearchParams();
+
+    if (params.isActive) {
+      queryParams.append("is_active", params.isActive);
+    }
+    if (params.search) {
+      queryParams.append("search", params.search);
+    }
+    if (params.page) {
+      queryParams.append("page", params.page);
+    }
+    if (params.limit) {
+      queryParams.append("limit", params.limit);
     }
 
-    const response = await fetch(
-      `${API_URL}/api/services/paginate?${queryParams}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const queryString = queryParams.toString();
+    const url = `${API_URL}/api/services/paginate${
+      queryString ? `?${queryString}` : ""
+    }`;
 
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
     if (!response.ok) {
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const error = await response.json();
-        throw new Error(
-          error.message || error.error || "Gagal mengambil data layanan"
-        );
-      }
-      throw new Error(`HTTP ${response.status}: Gagal mengambil data layanan`);
+      throw new Error(data.error || "Gagal mengambil data service");
     }
-
-    return response.json();
+    return data;
   },
 
-  async create(data) {
+  /**
+   * Get service by ID
+   * @param {number|string} id - Service ID
+   */
+  async getById(id) {
     const token = authService.getToken();
-    if (!token) {
-      throw new Error("Token tidak ditemukan, silakan login kembali");
+    const response = await fetch(`${API_URL}/api/services/${id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal mengambil data service");
     }
+    return data;
+  },
+
+  /**
+   * Create new service (WITHOUT loket field)
+   * @param {Object} serviceData - { code, nama_service, limits_queue, is_active }
+   */
+  async create(serviceData) {
+    const token = authService.getToken();
 
     const response = await fetch(`${API_URL}/api/services`, {
       method: "POST",
@@ -479,28 +505,28 @@ export const serviceService = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        code: serviceData.code,
+        nama_service: serviceData.nama_service,
+        limits_queue: serviceData.limits_queue,
+        is_active: serviceData.is_active,
+      }),
     });
 
+    const data = await response.json();
     if (!response.ok) {
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const error = await response.json();
-        throw new Error(
-          error.message || error.error || "Gagal membuat layanan"
-        );
-      }
-      throw new Error(`HTTP ${response.status}: Gagal membuat layanan`);
+      throw new Error(data.error || "Gagal membuat service");
     }
-
-    return response.json();
+    return data;
   },
 
-  async update(id, data) {
+  /**
+   * Update service (WITHOUT loket field)
+   * @param {number|string} id - Service ID
+   * @param {Object} serviceData - { code?, nama_service?, limits_queue?, is_active? }
+   */
+  async update(id, serviceData) {
     const token = authService.getToken();
-    if (!token) {
-      throw new Error("Token tidak ditemukan, silakan login kembali");
-    }
 
     const response = await fetch(`${API_URL}/api/services/${id}`, {
       method: "PUT",
@@ -508,49 +534,61 @@ export const serviceService = {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        code: serviceData.code,
+        nama_service: serviceData.nama_service,
+        limits_queue: serviceData.limits_queue,
+        is_active: serviceData.is_active,
+      }),
     });
 
+    const data = await response.json();
     if (!response.ok) {
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const error = await response.json();
-        throw new Error(
-          error.message || error.error || "Gagal mengupdate layanan"
-        );
-      }
-      throw new Error(`HTTP ${response.status}: Gagal mengupdate layanan`);
+      throw new Error(data.error || "Gagal mengupdate service");
     }
-
-    return response.json();
+    return data;
   },
 
+  /**
+   * Soft delete service
+   * @param {number|string} id - Service ID
+   */
+  async delete(id) {
+    const token = authService.getToken();
+
+    const response = await fetch(`${API_URL}/api/services/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal menghapus service");
+    }
+    return data;
+  },
+
+  /**
+   * Hard delete service (permanent deletion)
+   * @param {number|string} id - Service ID
+   */
   async hardDelete(id) {
     const token = authService.getToken();
-    if (!token) {
-      throw new Error("Token tidak ditemukan, silakan login kembali");
-    }
 
     const response = await fetch(`${API_URL}/api/services/${id}/permanent`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
       },
     });
 
+    const data = await response.json();
     if (!response.ok) {
-      const contentType = response.headers.get("content-type");
-      if (contentType && contentType.includes("application/json")) {
-        const error = await response.json();
-        throw new Error(
-          error.message || error.error || "Gagal menghapus layanan"
-        );
-      }
-      throw new Error(`HTTP ${response.status}: Gagal menghapus layanan`);
+      throw new Error(data.error || "Gagal menghapus service permanent");
     }
-
-    return response.json();
+    return data;
   },
 };
 export const queueService = {

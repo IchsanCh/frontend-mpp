@@ -121,10 +121,13 @@ export default function CallerService() {
 
       ws.onmessage = (event) => {
         if (!isMounted) return;
+        console.log("[WS] Raw data received:", event.data);
 
         try {
           const message = JSON.parse(event.data);
-
+          console.log("[WS] Parsed message:", message);
+          console.log("[WS] Message type:", message.type);
+          console.log("[WS] Message data:", message.data);
           if (message.type !== "queue_update") return;
 
           const stats = message.service_stats?.[serviceId];
@@ -137,7 +140,10 @@ export default function CallerService() {
           }
 
           const serviceTickets = (message.data || []).filter(
-            (q) => q.service_id === parseInt(serviceId)
+            (q) =>
+              q.service_id === parseInt(serviceId) &&
+              q.id !== 0 &&
+              q.ticket_code !== "-"
           );
 
           const called = serviceTickets.find((q) => q.status === "called");
@@ -256,7 +262,7 @@ export default function CallerService() {
       console.error("[AUDIO] Playback error:", err);
     } finally {
       isPlayingRef.current = false;
-      setTimeout(playNextAudio, 500);
+      setTimeout(playNextAudio, 50);
     }
   };
 
@@ -268,6 +274,8 @@ export default function CallerService() {
       }
 
       const audio = new Audio(src);
+      audio.preload = "auto";
+      audio.playbackRate = 1.0;
       currentAudioRef.current = audio;
 
       audio.onended = () => {
@@ -352,31 +360,50 @@ export default function CallerService() {
     }
   };
 
-  const handleRecall = async () => {
+  const handleRecallClick = () => {
     if (!currentTicket || loading) return;
+    document.getElementById("recall_modal").showModal();
+  };
 
-    const confirmed = window.confirm(
-      `Recall antrian ${currentTicket.ticket_code}?`
-    );
-    if (!confirmed) return;
+  const handleRecallConfirm = async () => {
+    if (!currentTicket || loading) return;
 
     try {
       setLoading(true);
 
-      const res = await queueService.recall(currentTicket.id, token);
+      const recallRes = await queueService.recall(currentTicket.id, token);
 
-      if (!res.success) {
-        showToast(res.error || "Gagal recall antrian", "error");
-      } else {
-        showToast("Antrian berhasil di-recall", "success");
+      if (!recallRes.success) {
+        showToast(recallRes.error || "Gagal recall antrian", "error");
+        return;
       }
+
+      showToast("Antrian berhasil di-recall", "success");
+
+      const nextRes = await queueService.callNext(
+        { service_id: parseInt(serviceId) },
+        token
+      );
+
+      if (!nextRes.success) {
+        showToast(
+          nextRes.error ||
+            "Recall berhasil, tapi gagal memanggil antrian berikutnya",
+          "warning"
+        );
+      } else {
+        showToast("Antrian berikutnya berhasil dipanggil", "success");
+      }
+
+      document.getElementById("recall_modal").close();
     } catch (err) {
-      console.error("Error recalling:", err);
-      showToast(err.response?.data?.error || "Gagal recall antrian", "error");
+      console.error("Error during recall and call next:", err);
+      showToast(err.response?.data?.error || "Gagal melakukan recall", "error");
     } finally {
       setLoading(false);
     }
   };
+
   const formatText = (text) => text?.replace(/_/g, " ").toUpperCase();
 
   return (
@@ -489,7 +516,7 @@ export default function CallerService() {
 
             {currentTicket && (
               <button
-                onClick={handleRecall}
+                onClick={handleRecallClick}
                 disabled={loading}
                 className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 backdrop-blur text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all border border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
               >
@@ -668,7 +695,8 @@ export default function CallerService() {
                   </li>
                   <li>
                     • Klik <strong className="text-white">Recall</strong> untuk
-                    memanggil ulang antrian yang sedang dipanggil
+                    mengembalikan antrian ke waiting dan memanggil antrian
+                    berikutnya
                   </li>
                   <li>• Audio akan berbunyi otomatis saat memanggil antrian</li>
                 </ul>
@@ -677,6 +705,81 @@ export default function CallerService() {
           </div>
         </div>
       </div>
+
+      {/* Recall Confirmation Modal - DaisyUI v5 */}
+      <dialog id="recall_modal" className="modal">
+        <div className="modal-box bg-slate-900 border-2 border-orange-500/50">
+          <h3 className="font-bold text-2xl text-orange-400 mb-4">
+            Konfirmasi Recall
+          </h3>
+
+          {currentTicket && (
+            <div className="mb-6">
+              <p className="text-slate-300 mb-4">
+                Anda akan melakukan recall untuk antrian:
+              </p>
+
+              <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                <p className="text-5xl font-bold text-white text-center mb-2">
+                  {currentTicket.ticket_code}
+                </p>
+                <p className="text-sm text-slate-400 text-center">
+                  Loket {formatText(currentTicket.loket)}
+                </p>
+              </div>
+
+              <div className="mt-4 bg-orange-900/20 border border-orange-500/30 rounded-lg p-3">
+                <p className="text-sm text-orange-300">
+                  <svg
+                    className="w-4 h-4 inline mr-2"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  Antrian ini akan dikembalikan ke status waiting dan antrian
+                  berikutnya akan otomatis dipanggil.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <div className="modal-action">
+            <form method="dialog" className="flex gap-3 w-full">
+              <button
+                className="btn flex-1 bg-slate-700 hover:bg-slate-600 text-white border-none"
+                disabled={loading}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleRecallConfirm}
+                disabled={loading}
+                className="btn flex-1 bg-orange-600 hover:bg-orange-700 text-white border-none"
+              >
+                {loading ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm"></span>
+                    Memproses...
+                  </>
+                ) : (
+                  "Ya, Recall"
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+        <form method="dialog" className="modal-backdrop">
+          <button disabled={loading}>close</button>
+        </form>
+      </dialog>
     </div>
   );
 }

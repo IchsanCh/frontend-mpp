@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { authService, unitService } from "../services/api";
+import { authService, unitService, audioService } from "../services/api";
 import Pagination from "../components/admin/Pagination";
 import { showToast } from "../utils/toast";
 
 export default function UnitManagement() {
   const [units, setUnits] = useState([]);
+  const [audios, setAudios] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterActive, setFilterActive] = useState("");
@@ -21,7 +22,8 @@ export default function UnitManagement() {
     code: "",
     nama_unit: "",
     is_active: "y",
-    main_display: "",
+    main_display: "active",
+    audio_file: "",
   });
   const [editingUnit, setEditingUnit] = useState(null);
   const [deletingUnit, setDeletingUnit] = useState(null);
@@ -32,6 +34,7 @@ export default function UnitManagement() {
 
   useEffect(() => {
     fetchUnits();
+    fetchAudios();
   }, [filterActive, searchTerm, page]);
 
   useEffect(() => {
@@ -60,6 +63,15 @@ export default function UnitManagement() {
     }
   };
 
+  const fetchAudios = async () => {
+    try {
+      const response = await audioService.getAll();
+      setAudios(response.data || []);
+    } catch (error) {
+      console.error("Gagal mengambil data audio:", error);
+    }
+  };
+
   const validateForm = () => {
     const errors = {};
 
@@ -71,6 +83,10 @@ export default function UnitManagement() {
 
     if (!formData.nama_unit.trim()) {
       errors.nama_unit = "Nama unit wajib diisi";
+    }
+
+    if (!formData.audio_file) {
+      errors.audio_file = "Audio file wajib dipilih";
     }
 
     setFormErrors(errors);
@@ -101,6 +117,7 @@ export default function UnitManagement() {
       nama_unit: unit.nama_unit,
       is_active: unit.is_active,
       main_display: unit.main_display,
+      audio_file: unit.audio_file || "",
     });
     setShowEditModal(true);
   };
@@ -147,7 +164,8 @@ export default function UnitManagement() {
       code: "",
       nama_unit: "",
       is_active: "y",
-      main_display: "",
+      main_display: "active",
+      audio_file: "",
     });
     setFormErrors({});
     setEditingUnit(null);
@@ -231,6 +249,7 @@ export default function UnitManagement() {
                   <th className="min-w-[30px]">No</th>
                   <th className="min-w-[80px]">Kode</th>
                   <th className="min-w-[150px]">Nama Unit</th>
+                  <th className="min-w-[130px]">Audio File</th>
                   <th className="min-w-[130px]">Status</th>
                   <th className="min-w-[130px]">Main Song</th>
                   <th className="min-w-[130px]">Dibuat</th>
@@ -241,7 +260,7 @@ export default function UnitManagement() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={isSuperUser ? 7 : 6}
+                      colSpan={isSuperUser ? 8 : 7}
                       className="text-center py-8"
                     >
                       <span className="loading loading-spinner loading-lg"></span>
@@ -250,7 +269,7 @@ export default function UnitManagement() {
                 ) : filteredUnits.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={isSuperUser ? 7 : 6}
+                      colSpan={isSuperUser ? 8 : 7}
                       className="text-center py-8 text-base-content/70"
                     >
                       Tidak ada data unit
@@ -266,6 +285,17 @@ export default function UnitManagement() {
                         </span>
                       </td>
                       <td>{unit.nama_unit}</td>
+                      <td>
+                        {unit.audio_file ? (
+                          <span className="badge badge-outline badge-info">
+                            {unit.audio_file}
+                          </span>
+                        ) : (
+                          <span className="text-base-content/50 text-sm italic">
+                            Tidak ada
+                          </span>
+                        )}
+                      </td>
                       <td>
                         <span
                           className={`badge font-semibold ${
@@ -418,6 +448,38 @@ export default function UnitManagement() {
                 )}
               </div>
 
+              <div className="form-control">
+                <label className="label pb-1">
+                  <span className="label-text font-medium text-black">
+                    Audio File <span className="text-error">*</span>
+                  </span>
+                </label>
+                <select
+                  className={`select select-bordered select-0 ${
+                    formErrors.audio_file ? "select-error" : ""
+                  }`}
+                  value={formData.audio_file}
+                  onChange={(e) =>
+                    setFormData({ ...formData, audio_file: e.target.value })
+                  }
+                >
+                  <option value="">-- Pilih Audio File --</option>
+                  {audios.map((audio) => (
+                    <option key={audio.id} value={audio.nama_audio}>
+                      {audio.nama_audio}
+                    </option>
+                  ))}
+                </select>
+                {formErrors.audio_file && (
+                  <span className="mt-1 text-xs text-error">
+                    {formErrors.audio_file}
+                  </span>
+                )}
+                <p className="mt-1 text-xs text-base-content/80">
+                  Pilih file audio untuk unit ini
+                </p>
+              </div>
+
               <div className="form-control gap-2 flex">
                 <label className="label pb-1">
                   <span className="label-text font-medium text-black">
@@ -435,6 +497,7 @@ export default function UnitManagement() {
                   <option value="n">Tidak Aktif</option>
                 </select>
               </div>
+
               <div className="form-control gap-2 flex">
                 <label className="label pb-1">
                   <span className="label-text font-medium text-black">
@@ -554,6 +617,38 @@ export default function UnitManagement() {
                 )}
               </div>
 
+              <div className="form-control">
+                <label className="label pb-1">
+                  <span className="label-text font-medium text-black">
+                    Audio File <span className="text-error">*</span>
+                  </span>
+                </label>
+                <select
+                  className={`select select-bordered select-0 ${
+                    formErrors.audio_file ? "select-error" : ""
+                  }`}
+                  value={formData.audio_file}
+                  onChange={(e) =>
+                    setFormData({ ...formData, audio_file: e.target.value })
+                  }
+                >
+                  <option value="">-- Pilih Audio File --</option>
+                  {audios.map((audio) => (
+                    <option key={audio.id} value={audio.nama_audio}>
+                      {audio.nama_audio}
+                    </option>
+                  ))}
+                </select>
+                {formErrors.audio_file && (
+                  <span className="mt-1 text-xs text-error">
+                    {formErrors.audio_file}
+                  </span>
+                )}
+                <p className="mt-1 text-xs text-base-content/80">
+                  Audio saat ini: {editingUnit?.audio_file || "Tidak ada"}
+                </p>
+              </div>
+
               <div className="form-control flex gap-2">
                 <label className="label pb-1">
                   <span className="label-text font-medium text-black">
@@ -571,6 +666,7 @@ export default function UnitManagement() {
                   <option value="n">Tidak Aktif</option>
                 </select>
               </div>
+
               <div className="form-control flex gap-2">
                 <label className="label pb-1">
                   <span className="label-text font-medium text-black">

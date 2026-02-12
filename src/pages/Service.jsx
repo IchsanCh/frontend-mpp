@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { authService, serviceService, unitService } from "../services/api";
+import { authService, serviceService } from "../services/api";
 import Pagination from "../components/admin/Pagination";
 import { showToast } from "../utils/toast";
 
@@ -20,7 +20,6 @@ export default function ServiceManagement() {
   const [formData, setFormData] = useState({
     code: "",
     nama_service: "",
-    loket: "",
     limits_queue: 0,
     is_active: "y",
   });
@@ -66,17 +65,13 @@ export default function ServiceManagement() {
 
     if (!formData.code.trim()) {
       errors.code = "Kode layanan wajib diisi";
-    } else if (!/^[A-Z]{1,2}$/.test(formData.code)) {
+    } else if (!/^[A-Z]{1,10}$/.test(formData.code)) {
       errors.code =
-        "Kode layanan harus 1-2 huruf (A-Z), tanpa angka atau karakter khusus";
+        "Kode layanan harus 1-10 huruf (A-Z), tanpa angka atau karakter khusus";
     }
 
     if (!formData.nama_service.trim()) {
       errors.nama_service = "Nama layanan wajib diisi";
-    }
-
-    if (!formData.loket.trim()) {
-      errors.loket = "Loket wajib diisi";
     }
 
     if (formData.limits_queue < 0) {
@@ -111,7 +106,6 @@ export default function ServiceManagement() {
     setFormData({
       code: service.code,
       nama_service: service.nama_service,
-      loket: service.loket,
       limits_queue: service.limits_queue,
       is_active: service.is_active,
     });
@@ -161,7 +155,6 @@ export default function ServiceManagement() {
     setFormData({
       code: "",
       nama_service: "",
-      loket: "",
       limits_queue: 0,
       is_active: "y",
     });
@@ -173,8 +166,7 @@ export default function ServiceManagement() {
     const searchLower = searchTerm.toLowerCase();
     return (
       service.code.toLowerCase().includes(searchLower) ||
-      service.nama_service.toLowerCase().includes(searchLower) ||
-      service.loket?.toLowerCase().includes(searchLower)
+      service.nama_service.toLowerCase().includes(searchLower)
     );
   });
 
@@ -248,7 +240,6 @@ export default function ServiceManagement() {
                   <th className="min-w-[30px]">No</th>
                   <th className="min-w-[80px]">Kode</th>
                   <th className="min-w-[150px]">Nama Layanan</th>
-                  <th className="min-w-[100px]">Loket</th>
                   <th className="min-w-[80px]">Batas Antrian</th>
                   <th className="min-w-[100px]">Status</th>
                   <th className="min-w-[130px]">Dibuat</th>
@@ -259,7 +250,7 @@ export default function ServiceManagement() {
                 {loading ? (
                   <tr>
                     <td
-                      colSpan={isUnitRole ? 8 : 7}
+                      colSpan={isUnitRole ? 7 : 6}
                       className="text-center py-8"
                     >
                       <span className="loading loading-spinner loading-lg"></span>
@@ -268,7 +259,7 @@ export default function ServiceManagement() {
                 ) : filteredServices.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={isUnitRole ? 8 : 7}
+                      colSpan={isUnitRole ? 7 : 6}
                       className="text-center py-8 text-base-content/70"
                     >
                       Tidak ada data layanan
@@ -284,11 +275,6 @@ export default function ServiceManagement() {
                         </span>
                       </td>
                       <td>{service.nama_service}</td>
-                      <td>
-                        <span className="badge badge-outline">
-                          {service.loket}
-                        </span>
-                      </td>
                       <td className="text-center">
                         <span className="font-semibold">
                           {service.limits_queue}
@@ -382,8 +368,8 @@ export default function ServiceManagement() {
                 </div>
                 <input
                   type="text"
-                  placeholder="Contoh: LOKET"
-                  maxLength={2}
+                  placeholder="Contoh: A"
+                  maxLength={10}
                   className={`input-base input-0 w-full ${
                     formErrors.code ? "input-error" : ""
                   }`}
@@ -402,7 +388,7 @@ export default function ServiceManagement() {
                     </span>
                   ) : (
                     <span className="label-text-alt">
-                      1-2 huruf (A-Z), tanpa angka atau simbol
+                      1-10 huruf (A-Z), tanpa angka atau simbol
                     </span>
                   )}
                 </div>
@@ -416,7 +402,7 @@ export default function ServiceManagement() {
                 </div>
                 <input
                   type="text"
-                  placeholder="Contoh: Loket Pendaftaran"
+                  placeholder="Contoh: Pembuatan KTP"
                   className={`input-base input-0 w-full ${
                     formErrors.nama_service ? "input-error" : ""
                   }`}
@@ -429,32 +415,6 @@ export default function ServiceManagement() {
                   {formErrors.nama_service && (
                     <span className="label-text-alt text-error">
                       {formErrors.nama_service}
-                    </span>
-                  )}
-                </div>
-              </label>
-
-              <label className="form-control w-full">
-                <div className="label">
-                  <span className="label-text text-black font-medium">
-                    Loket <span className="text-error">*</span>
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Contoh: 1, 2"
-                  className={`input-base input-0 w-full ${
-                    formErrors.loket ? "input-error" : ""
-                  }`}
-                  value={formData.loket}
-                  onChange={(e) =>
-                    setFormData({ ...formData, loket: e.target.value })
-                  }
-                />
-                <div className="label">
-                  {formErrors.loket && (
-                    <span className="label-text-alt text-error">
-                      {formErrors.loket}
                     </span>
                   )}
                 </div>
@@ -494,7 +454,7 @@ export default function ServiceManagement() {
                 </div>
               </label>
 
-              <label className="form-control w-full md:col-span-2">
+              <label className="form-control w-full">
                 <div className="label">
                   <span className="label-text text-black font-medium">
                     Status
@@ -563,7 +523,7 @@ export default function ServiceManagement() {
                 </div>
                 <input
                   type="text"
-                  maxLength={2}
+                  maxLength={10}
                   className={`input-base input-0 w-full ${
                     formErrors.code ? "input-error" : ""
                   }`}
@@ -582,7 +542,7 @@ export default function ServiceManagement() {
                     </span>
                   ) : (
                     <span className="label-text-alt">
-                      1-2 huruf (A-Z), tanpa angka atau simbol
+                      1-10 huruf (A-Z), tanpa angka atau simbol
                     </span>
                   )}
                 </div>
@@ -608,31 +568,6 @@ export default function ServiceManagement() {
                   {formErrors.nama_service && (
                     <span className="label-text-alt text-error">
                       {formErrors.nama_service}
-                    </span>
-                  )}
-                </div>
-              </label>
-
-              <label className="form-control w-full">
-                <div className="label">
-                  <span className="label-text text-black font-medium">
-                    Loket <span className="text-error">*</span>
-                  </span>
-                </div>
-                <input
-                  type="text"
-                  className={`input-base input-0 w-full ${
-                    formErrors.loket ? "input-error" : ""
-                  }`}
-                  value={formData.loket}
-                  onChange={(e) =>
-                    setFormData({ ...formData, loket: e.target.value })
-                  }
-                />
-                <div className="label">
-                  {formErrors.loket && (
-                    <span className="label-text-alt text-error">
-                      {formErrors.loket}
                     </span>
                   )}
                 </div>
@@ -671,7 +606,7 @@ export default function ServiceManagement() {
                 </div>
               </label>
 
-              <label className="form-control w-full md:col-span-2">
+              <label className="form-control w-full">
                 <div className="label">
                   <span className="label-text text-black font-medium">
                     Status
