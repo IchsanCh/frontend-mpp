@@ -20,8 +20,11 @@ export default function CallerMenu() {
       setLoading(false);
       return;
     }
-
     loadServices();
+    const interval = setInterval(() => {
+      loadServices();
+    }, 30000);
+    return () => clearInterval(interval);
   }, [unitId]);
 
   const loadServices = async () => {
@@ -124,24 +127,51 @@ export default function CallerMenu() {
                 {unitInfo?.name} • Pilih layanan untuk mulai memanggil antrian
               </p>
             </div>
-            <button
-              onClick={() => navigate(-1)}
-              className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 px-4 py-2 rounded-xl transition-colors border border-slate-700/50"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={loadServices}
+                disabled={loading}
+                className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 px-4 py-2 rounded-xl transition-colors border border-slate-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Refresh data"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                />
-              </svg>
-            </button>
+                <svg
+                  className={`w-5 h-5 transition-transform duration-300 ${
+                    loading ? "animate-spin" : "hover:rotate-180"
+                  }`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+              </button>
+
+              <button
+                onClick={() => navigate(-1)}
+                title="Back"
+                className="bg-slate-800/50 hover:bg-slate-700/50 text-slate-300 px-4 py-2 rounded-xl transition-colors border border-slate-700/50"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
