@@ -78,7 +78,7 @@ export default function UnitManagement() {
     if (!formData.code.trim()) {
       errors.code = "Kode unit wajib diisi";
     } else if (!/^[A-Z]{1,10}$/.test(formData.code)) {
-      errors.code = "Kode unit hanya boleh huruf A–Z (maks. 10 karakter)";
+      errors.code = "Kode unit hanya boleh huruf A–Z (maks. 2 karakter)";
     }
 
     if (!formData.nama_unit.trim()) {
@@ -398,7 +398,7 @@ export default function UnitManagement() {
                 <input
                   type="text"
                   placeholder="Contoh: SANDIGI"
-                  maxLength={10}
+                  maxLength={2}
                   className={`input-base input-0 ${
                     formErrors.code ? "input-error" : ""
                   }`}
@@ -420,7 +420,7 @@ export default function UnitManagement() {
                   </span>
                 )}
                 <p className="mt-1 text-xs text-base-content/80">
-                  Maksimal 10 huruf (A–Z), tanpa angka atau karakter khusus
+                  Maksimal 2 huruf (A–Z), tanpa angka atau karakter khusus
                 </p>
               </div>
 
@@ -572,7 +572,7 @@ export default function UnitManagement() {
                 </label>
                 <input
                   type="text"
-                  maxLength={10}
+                  maxLength={2}
                   className={`input-base input-0 ${
                     formErrors.code ? "input-error" : ""
                   }`}
@@ -590,7 +590,7 @@ export default function UnitManagement() {
                   </span>
                 )}
                 <p className="mt-1 text-xs text-base-content/80">
-                  Maksimal 10 huruf (A–Z), tanpa angka atau karakter khusus
+                  Maksimal 2 huruf (A–Z), tanpa angka atau karakter khusus
                 </p>
               </div>
 

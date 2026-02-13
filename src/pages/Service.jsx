@@ -67,7 +67,7 @@ export default function ServiceManagement() {
       errors.code = "Kode layanan wajib diisi";
     } else if (!/^[A-Z]{1,10}$/.test(formData.code)) {
       errors.code =
-        "Kode layanan harus 1-10 huruf (A-Z), tanpa angka atau karakter khusus";
+        "Kode layanan harus 1-2 huruf (A-Z), tanpa angka atau karakter khusus";
     }
 
     if (!formData.nama_service.trim()) {
@@ -369,7 +369,7 @@ export default function ServiceManagement() {
                 <input
                   type="text"
                   placeholder="Contoh: A"
-                  maxLength={10}
+                  maxLength={2}
                   className={`input-base input-0 w-full ${
                     formErrors.code ? "input-error" : ""
                   }`}
@@ -388,7 +388,7 @@ export default function ServiceManagement() {
                     </span>
                   ) : (
                     <span className="label-text-alt">
-                      1-10 huruf (A-Z), tanpa angka atau simbol
+                      1-2 huruf (A-Z), tanpa angka atau simbol
                     </span>
                   )}
                 </div>
@@ -523,7 +523,7 @@ export default function ServiceManagement() {
                 </div>
                 <input
                   type="text"
-                  maxLength={10}
+                  maxLength={2}
                   className={`input-base input-0 w-full ${
                     formErrors.code ? "input-error" : ""
                   }`}
@@ -542,7 +542,7 @@ export default function ServiceManagement() {
                     </span>
                   ) : (
                     <span className="label-text-alt">
-                      1-10 huruf (A-Z), tanpa angka atau simbol
+                      1-2 huruf (A-Z), tanpa angka atau simbol
                     </span>
                   )}
                 </div>
