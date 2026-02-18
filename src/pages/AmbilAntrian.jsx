@@ -724,7 +724,7 @@ export default function UnitPage() {
                 Harap menunggu panggilan
               </p>
 
-              <p style={{ fontSize: "6pt", color: "#000", lineHeight: "1.2" }}>
+              <p style={{ fontSize: "8pt", color: "#000", lineHeight: "1.2" }}>
                 Dicetak:{" "}
                 {ticketData?.ticket?.created_at &&
                   new Date(ticketData.ticket.created_at).toLocaleString(

@@ -23,7 +23,7 @@ export default function CallerMenu() {
     loadServices();
     const interval = setInterval(() => {
       loadServices();
-    }, 30000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [unitId]);
 
@@ -275,6 +275,15 @@ export default function CallerMenu() {
                         </span>
                         <span className="text-lg font-bold text-white">
                           {service.today_queue_count}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 bg-amber-500/10 rounded-xl border border-amber-500/30">
+                        <span className="text-sm text-amber-300 font-medium">
+                          Menunggu Dipanggil
+                        </span>
+                        <span className="text-lg font-bold text-amber-400">
+                          {service.waiting_queue_count || 0}
                         </span>
                       </div>
 

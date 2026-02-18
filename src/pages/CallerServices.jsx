@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { queueService } from "../services/api";
 import { showToast } from "../utils/toast";
-
+import { useAudioManager } from "../utils/useAudioManager";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9080";
 const BASE_AUDIO_URL = API_URL;
 const wsProtocol = API_URL.startsWith("https") ? "wss" : "ws";
@@ -25,31 +25,32 @@ export default function CallerService() {
   const [waitingCount, setWaitingCount] = useState(0);
   const [hasNext, setHasNext] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [audioInteracted, setAudioInteracted] = useState(false);
 
   const wsRef = useRef(null);
-  const audioQueueRef = useRef([]);
-  const isPlayingRef = useRef(false);
   const processedCallsRef = useRef(new Set());
-  const currentAudioRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
   const retryCountRef = useRef(0);
   const hasShownMaxRetryToast = useRef(false);
+  const isAudioPlayingRef = useRef(false);
 
   const token = sessionStorage.getItem("token");
+
+  const { playSequence, initializeAudio } = useAudioManager(BASE_AUDIO_URL);
+  const audioInitializedRef = useRef(false);
+
+  const handleUserInteraction = async () => {
+    if (!audioInitializedRef.current) {
+      const ok = await initializeAudio();
+      if (ok) {
+        audioInitializedRef.current = true;
+        console.log("[AUDIO] AudioContext initialized");
+      }
+    }
+  };
 
   useEffect(() => {
     return () => {
       console.log("[CallerService] Cleanup on unmount");
-
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.src = "";
-        currentAudioRef.current = null;
-      }
-
-      audioQueueRef.current = [];
-      isPlayingRef.current = false;
 
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -69,9 +70,8 @@ export default function CallerService() {
   useEffect(() => {
     let isMounted = true;
 
-    audioQueueRef.current = [];
     processedCallsRef.current.clear();
-    isPlayingRef.current = false;
+    isAudioPlayingRef.current = false;
 
     const connectWebSocket = () => {
       if (!isMounted) return;
@@ -126,8 +126,6 @@ export default function CallerService() {
         try {
           const message = JSON.parse(event.data);
           console.log("[WS] Parsed message:", message);
-          console.log("[WS] Message type:", message.type);
-          console.log("[WS] Message data:", message.data);
           if (message.type !== "queue_update") return;
 
           const stats = message.service_stats?.[serviceId];
@@ -170,7 +168,7 @@ export default function CallerService() {
             ) {
               console.log(`[AUDIO] Enqueuing audio for ${called.ticket_code}`);
               processedCallsRef.current.add(playKey);
-              enqueueAudio(called);
+              playAudioSequence(called);
             }
           }
         } catch (err) {
@@ -220,93 +218,36 @@ export default function CallerService() {
     };
   }, [serviceId]);
 
-  const enqueueAudio = (queueData) => {
-    audioQueueRef.current.push(queueData);
-    console.log(
-      `[AUDIO] Queue length: ${audioQueueRef.current.length}, isPlaying: ${isPlayingRef.current}`
-    );
-    playNextAudio();
-  };
-
-  const playNextAudio = async () => {
-    if (isPlayingRef.current) {
-      console.log("[AUDIO] Already playing, waiting...");
-      return;
-    }
-
-    if (audioQueueRef.current.length === 0) {
-      console.log("[AUDIO] Queue empty");
-      return;
-    }
-
-    const next = audioQueueRef.current.shift();
-
-    if (next.service_id !== parseInt(serviceId)) {
+  const playAudioSequence = (queueData) => {
+    if (queueData.service_id !== parseInt(serviceId)) {
       console.log(
-        `[AUDIO] Skipping audio for different service: ${next.service_id}`
+        `[AUDIO] Skipping audio for different service: ${queueData.service_id}`
       );
-      isPlayingRef.current = false;
-      playNextAudio();
       return;
     }
 
-    isPlayingRef.current = true;
-    console.log(`[AUDIO] START playing: ${next.ticket_code}`);
-
-    try {
-      for (const path of next.audio_paths) {
-        await playAudio(`${BASE_AUDIO_URL}/${path}`);
-      }
-      console.log(`[AUDIO] DONE playing: ${next.ticket_code}`);
-    } catch (err) {
-      console.error("[AUDIO] Playback error:", err);
-    } finally {
-      isPlayingRef.current = false;
-      setTimeout(playNextAudio, 50);
-    }
-  };
-
-  const playAudio = (src) =>
-    new Promise((resolve) => {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current.src = "";
-      }
-
-      const audio = new Audio(src);
-      audio.preload = "auto";
-      audio.playbackRate = 1.0;
-      currentAudioRef.current = audio;
-
-      audio.onended = () => {
-        currentAudioRef.current = null;
-        resolve();
-      };
-
-      audio.onerror = (err) => {
-        console.error(`[AUDIO] Failed to load: ${src}`, err);
-        currentAudioRef.current = null;
-        resolve();
-      };
-
-      audio
-        .play()
-        .then(() => {
-          console.log(`[AUDIO] Playing: ${src}`);
-        })
-        .catch((err) => {
-          console.error(`[AUDIO] Play error: ${err.message}`);
-          currentAudioRef.current = null;
-          resolve();
-        });
-    });
-
-  const handleAudioInteraction = () => {
-    setAudioInteracted(true);
-    const silentAudio = new Audio(
-      "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"
+    const normalizedPaths = queueData.audio_paths.map((p) =>
+      p.replace(/^public\//, "")
     );
-    silentAudio.play().catch(() => {});
+
+    console.log(
+      `[AUDIO] Playing sequence for ${queueData.ticket_code}:`,
+      normalizedPaths
+    );
+
+    isAudioPlayingRef.current = true;
+
+    playSequence(
+      normalizedPaths,
+      () => {
+        console.log(`[AUDIO] Finished: ${queueData.ticket_code}`);
+        isAudioPlayingRef.current = false;
+      },
+      (err) => {
+        console.error(`[AUDIO] Error playing ${queueData.ticket_code}:`, err);
+        isAudioPlayingRef.current = false;
+      }
+    );
   };
 
   const handleNext = async () => {
@@ -407,7 +348,10 @@ export default function CallerService() {
   const formatText = (text) => text?.replace(/_/g, " ").toUpperCase();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+    <div
+      className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900"
+      onClick={handleUserInteraction}
+    >
       <div className="bg-slate-900/50 backdrop-blur-xl border-b border-slate-700/50 sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -439,27 +383,6 @@ export default function CallerService() {
                 </p>
               </div>
             </div>
-
-            {!audioInteracted && (
-              <button
-                onClick={handleAudioInteraction}
-                className="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-emerald-500/50"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                  <path
-                    fillRule="evenodd"
-                    d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Aktifkan Audio
-              </button>
-            )}
           </div>
         </div>
       </div>

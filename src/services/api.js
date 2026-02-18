@@ -69,6 +69,36 @@ export const authService = {
 };
 export const unitService = {
   /**
+   * Get all units WITHOUT pagination (for dropdowns)
+   * @param {Object} params - { isActive }
+   * @returns {Promise<{success: boolean, data: Array}>}
+   */
+  async getAllNoPaginate(params = {}) {
+    const token = authService.getToken();
+
+    const queryParams = new URLSearchParams();
+
+    if (params.isActive) {
+      queryParams.append("is_active", params.isActive);
+    }
+
+    const queryString = queryParams.toString();
+    const url = `${API_URL}/api/units${queryString ? `?${queryString}` : ""}`;
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal mengambil data unit");
+    }
+    return data;
+  },
+
+  /**
    * Get all units with pagination
    * @param {Object} params - { isActive, page, limit }
    * @returns {Promise<{success: boolean, data: Array, pagination: Object}>}

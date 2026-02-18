@@ -66,7 +66,7 @@ export default function UserManagement() {
 
   const fetchUnits = async () => {
     try {
-      const res = await unitService.getAll();
+      const res = await unitService.getAllNoPaginate({ isActive: "y" });
       setUnits(res.data || []);
     } catch (err) {
       console.error(err.message);
