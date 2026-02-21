@@ -8,7 +8,7 @@ if (import.meta.env.VITE_APP_ENV === "production") {
   console.debug = () => {};
   console.info = () => {};
   console.warn = () => {};
-  console.error = () => {};
+  // console.error = () => {};
 }
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
