@@ -210,20 +210,14 @@ export default function CallerMenu() {
               return (
                 <div
                   key={service.id}
-                  onClick={() => isAvailable && handleSelectService(service)}
-                  className={`group relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-2xl border-2 transition-all duration-300 ${
-                    isAvailable
-                      ? "border-slate-700/50 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/10 cursor-pointer hover:-translate-y-1"
-                      : "border-slate-800/50 opacity-60 cursor-not-allowed"
-                  }`}
+                  onClick={() => handleSelectService(service)}
+                  className="group relative bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-2xl border-2 transition-all duration-300 border-slate-700/50 hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/10 cursor-pointer hover:-translate-y-1"
                   style={{
                     animationDelay: `${index * 50}ms`,
                     animation: "fadeInUp 0.5s ease-out forwards",
                   }}
                 >
-                  {isAvailable && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:to-emerald-500/10 rounded-2xl transition-all duration-300"></div>
-                  )}
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/5 group-hover:to-emerald-500/10 rounded-2xl transition-all duration-300"></div>
 
                   <div className="relative p-6">
                     <div className="flex items-start justify-between mb-4">
@@ -313,25 +307,31 @@ export default function CallerMenu() {
                       )}
                     </div>
 
-                    {isAvailable && (
-                      <div className="flex items-center justify-end">
-                        <div className="w-10 h-10 rounded-full bg-emerald-500/10 group-hover:bg-emerald-500/20 flex items-center justify-center transition-colors">
-                          <svg
-                            className="w-5 h-5 text-emerald-400 group-hover:translate-x-0.5 transition-transform"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M13 7l5 5m0 0l-5 5m5-5H6"
-                            />
-                          </svg>
-                        </div>
+                    <div className="flex items-center justify-end">
+                      <div
+                        className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+                          isAvailable
+                            ? "bg-emerald-500/10 group-hover:bg-emerald-500/20"
+                            : "bg-red-500/10 group-hover:bg-red-500/20"
+                        }`}
+                      >
+                        <svg
+                          className={`w-5 h-5 group-hover:translate-x-0.5 transition-transform ${
+                            isAvailable ? "text-emerald-400" : "text-red-400"
+                          }`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13 7l5 5m0 0l-5 5m5-5H6"
+                          />
+                        </svg>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               );

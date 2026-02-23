@@ -148,6 +148,11 @@ const DisplayAntrian = () => {
           status: queue.status,
           last_called_at: queue.last_called_at,
         });
+      } else {
+        // Update kalau sudah ada
+        existingService.ticket_code = queue.ticket_code;
+        existingService.status = queue.status;
+        existingService.last_called_at = queue.last_called_at;
       }
 
       if (queue.last_called_at) {
