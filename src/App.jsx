@@ -23,6 +23,7 @@ import { authService } from "./services/api";
 import NotFound from "./pages/NotFound";
 import UnitReportManagement from "./pages/UnitReports";
 import FAQManagement from "./pages/FAQ";
+import LoginKiosk from "./pages/LoginKiosk";
 
 export default function App() {
   return (
@@ -33,6 +34,16 @@ export default function App() {
           <PublicRoute>
             <MainLayout title="Login">
               <Login />
+            </MainLayout>
+          </PublicRoute>
+        }
+      />
+      <Route
+        path="/san/login/kiosk"
+        element={
+          <PublicRoute>
+            <MainLayout title="Login Kiosk">
+              <LoginKiosk />
             </MainLayout>
           </PublicRoute>
         }

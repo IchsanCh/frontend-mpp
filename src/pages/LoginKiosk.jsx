@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   Mail,
   Lock,
@@ -12,27 +11,7 @@ import {
 import logo from "../assets/images/logo.webp";
 import { authService } from "../services/api";
 
-const SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-const APP_NAME = import.meta.env.VITE_APP_NAME || "SANDIGI";
-
-export default function Login() {
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = `https://www.google.com/recaptcha/api.js?render=${SITE_KEY}`;
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-
-    return () => {
-      const badge = document.querySelector(".grecaptcha-badge");
-      if (badge) badge.remove();
-
-      document.body.removeChild(script);
-      delete window.grecaptcha;
-    };
-  }, []);
-
-  const navigate = useNavigate();
+export default function LoginKiosk() {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -41,13 +20,6 @@ export default function Login() {
   const [touched, setTouched] = useState({ email: false, password: false });
   const [errors, setErrors] = useState({ email: "", password: "" });
   const [loginError, setLoginError] = useState("");
-
-  const getRecaptchaToken = async () => {
-    return await window.grecaptcha.execute(
-      import.meta.env.VITE_RECAPTCHA_SITE_KEY,
-      { action: "login" }
-    );
-  };
 
   const validateEmail = (value) => {
     if (!value) return "Email wajib diisi";
@@ -67,7 +39,7 @@ export default function Login() {
     setEmail(value);
     setLoginError("");
     if (touched.email) {
-      setErrors({ ...errors, email: validateEmail(value) });
+      setErrors((prev) => ({ ...prev, email: validateEmail(value) }));
     }
   };
 
@@ -76,19 +48,19 @@ export default function Login() {
     setPassword(value);
     setLoginError("");
     if (touched.password) {
-      setErrors({ ...errors, password: validatePassword(value) });
+      setErrors((prev) => ({ ...prev, password: validatePassword(value) }));
     }
   };
 
   const handleEmailBlur = () => {
-    setTouched({ ...touched, email: true });
-    setErrors({ ...errors, email: validateEmail(email) });
+    setTouched((prev) => ({ ...prev, email: true }));
+    setErrors((prev) => ({ ...prev, email: validateEmail(email) }));
     setFocusedField(null);
   };
 
   const handlePasswordBlur = () => {
-    setTouched({ ...touched, password: true });
-    setErrors({ ...errors, password: validatePassword(password) });
+    setTouched((prev) => ({ ...prev, password: true }));
+    setErrors((prev) => ({ ...prev, password: validatePassword(password) }));
     setFocusedField(null);
   };
 
@@ -105,13 +77,7 @@ export default function Login() {
     if (!emailError && !passwordError) {
       setIsLoading(true);
       try {
-        const recaptchaToken = await getRecaptchaToken();
-
-        const response = await authService.login(
-          email,
-          password,
-          recaptchaToken
-        );
+        const response = await authService.loginKiosk(email, password);
 
         authService.saveToken(response.token);
         authService.saveUser(response.user);
@@ -145,7 +111,9 @@ export default function Login() {
                   className="h-full object-cover w-16"
                 />
               </div>
-              <h2 className="text-2xl font-bold text-base-content">Login</h2>
+              <h2 className="text-2xl font-bold text-base-content">
+                Login Kiosk
+              </h2>
             </div>
 
             {loginError && (
@@ -193,6 +161,7 @@ export default function Login() {
                     onFocus={() => setFocusedField("email")}
                     onBlur={handleEmailBlur}
                     disabled={isLoading}
+                    autoComplete="username"
                   />
                   {touched.email && (
                     <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none">
@@ -251,6 +220,7 @@ export default function Login() {
                     onFocus={() => setFocusedField("password")}
                     onBlur={handlePasswordBlur}
                     disabled={isLoading}
+                    autoComplete="current-password"
                   />
                   <div className="absolute inset-y-0 right-0 pr-4 flex items-center gap-2">
                     {touched.password && (

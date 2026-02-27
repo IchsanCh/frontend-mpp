@@ -22,7 +22,23 @@ export const authService = {
 
     return data;
   },
+  async loginKiosk(email, password) {
+    const response = await fetch(`${API_URL}/san/login-kiosk`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    });
 
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Login gagal");
+    }
+
+    return data;
+  },
   saveToken(token) {
     sessionStorage.setItem("token", token);
   },
