@@ -319,7 +319,7 @@ export const configService = {
 
   /**
    * Create config
-   * @param {Object} configData - { jam_buka, jam_tutup }
+   * @param {Object} configData - { text_marque }
    * @returns {Promise<{success: boolean, message: string, data: Object}>}
    */
   async create(configData) {
@@ -334,7 +334,7 @@ export const configService = {
       },
       body: JSON.stringify({
         email: user?.email,
-        ...configData,
+        text_marque: configData.text_marque,
       }),
     });
 
@@ -349,7 +349,7 @@ export const configService = {
 
   /**
    * Update config
-   * @param {Object} configData - { jam_buka, jam_tutup }
+   * @param {Object} configData - { text_marque }
    * @returns {Promise<{success: boolean, message: string, data: Object}>}
    */
   async update(configData) {
@@ -364,7 +364,7 @@ export const configService = {
       },
       body: JSON.stringify({
         email: user?.email,
-        ...configData,
+        text_marque: configData.text_marque,
       }),
     });
 
@@ -1124,6 +1124,67 @@ export const dashboardService = {
 
     const result = await response.json();
     return result.data;
+  },
+};
+
+export const scheduleService = {
+  /**
+   * Get all schedules for a unit (7 hari)
+   * @param {number|string} unitId - Unit ID
+   */
+  async getByUnit(unitId) {
+    const token = authService.getToken();
+    const response = await fetch(`${API_URL}/api/units/${unitId}/schedules`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal mengambil jadwal unit");
+    }
+    return data;
+  },
+
+  /**
+   * Upsert schedules for a unit (kirim semua 7 hari sekaligus)
+   * @param {number|string} unitId - Unit ID
+   * @param {Array} schedules - Array of { day_of_week, jam_buka, jam_tutup, is_active }
+   */
+  async upsert(unitId, schedules) {
+    const token = authService.getToken();
+    const response = await fetch(`${API_URL}/api/units/${unitId}/schedules`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ schedules }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal menyimpan jadwal");
+    }
+    return data;
+  },
+
+  /**
+   * Delete one schedule entry
+   * @param {number|string} unitId - Unit ID
+   * @param {number|string} scheduleId - Schedule ID
+   */
+  async delete(unitId, scheduleId) {
+    const token = authService.getToken();
+    const response = await fetch(
+      `${API_URL}/api/units/${unitId}/schedules/${scheduleId}`,
+      {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Gagal menghapus jadwal");
+    }
+    return data;
   },
 };
 

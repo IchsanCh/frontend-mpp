@@ -9,6 +9,7 @@ import Home from "./pages/Home";
 import AdminLayout from "./layouts/AdminLayout";
 import UnitManagement from "./pages/Unit";
 import ConfigManagement from "./pages/Config";
+import JamOperasional from "./pages/JamOperasional";
 import UserManagement from "./pages/Users";
 import ServiceManagement from "./pages/Service";
 import UnitPage from "./pages/AmbilAntrian";
@@ -70,6 +71,17 @@ export default function App() {
           <ProtectedRoute>
             <AdminLayout title="Unit Management">
               <UnitManagement />
+            </AdminLayout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/admin/jam-operasional"
+        element={
+          <ProtectedRoute>
+            <AdminLayout title="Jam Operasional">
+              <JamOperasional />
             </AdminLayout>
           </ProtectedRoute>
         }

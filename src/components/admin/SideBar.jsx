@@ -51,6 +51,12 @@ export default function SideBar({ children }) {
         description: "Manajemen Unit",
       },
       {
+        to: "/admin/jam-operasional",
+        title: "Jam Operasional",
+        icon: BellElectricIcon,
+        description: "Jadwal per unit",
+      },
+      {
         to: "/admin/users",
         title: "Pengguna",
         icon: Users,

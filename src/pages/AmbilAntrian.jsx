@@ -5,42 +5,75 @@ import logo from "../assets/images/logo.webp";
 const API_URL = import.meta.env.VITE_API_URL;
 
 export default function UnitPage() {
-  const [units, setUnits] = useState([]);
+  // unitsStatus: array dari WS — { id, nama_unit, queue, jam_buka, jam_tutup, has_schedule, ... }
+  const [unitsStatus, setUnitsStatus] = useState([]);
   const [services, setServices] = useState([]);
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [ticketModal, setTicketModal] = useState(false);
   const [ticketData, setTicketData] = useState(null);
   const [loadingTake, setLoadingTake] = useState(false);
-  const [queueStatus, setQueueStatus] = useState(null);
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const wsRef = useRef(null);
 
-  const loadUnits = useCallback(async () => {
-    try {
-      setLoading(true);
-      const res = await unitService.getAll({
-        isActive: "y",
-        page: 1,
-        limit: 100,
-      });
-      setUnits(res.data || []);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+  // Koneksi WebSocket — terima broadcast semua unit sekaligus
+  useEffect(() => {
+    const wsProtocol = API_URL.startsWith("https") ? "wss" : "ws";
+    const wsUrl = `${wsProtocol}://${API_URL.replace(
+      /^https?:\/\//,
+      ""
+    )}/ws/units`;
+
+    const connect = () => {
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setLoading(false);
+        setError(null);
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          // Payload baru: { type: "units_status", units: [...] }
+          if (payload.type === "units_status" && Array.isArray(payload.units)) {
+            setUnitsStatus(payload.units);
+            setLoading(false);
+          }
+        } catch (e) {
+          console.error("WS parse error:", e);
+        }
+      };
+
+      ws.onerror = () => {
+        setError("Gagal terhubung ke server. Silakan refresh halaman.");
+        setLoading(false);
+      };
+
+      ws.onclose = () => {
+        // Reconnect setelah 3 detik jika putus
+        setTimeout(connect, 3000);
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (wsRef.current) wsRef.current.close();
+    };
   }, []);
 
+  const getUnitStatus = useCallback(
+    (unitId) => unitsStatus.find((u) => u.id === unitId) || null,
+    [unitsStatus]
+  );
+
   const openUnit = async (unit) => {
-    if (queueStatus?.queue === "closed") {
-      alert(
-        `Antrian belum dibuka\nJam operasional: ${queueStatus.jam_buka} - ${queueStatus.jam_tutup}`
-      );
-      return;
-    }
+    const status = getUnitStatus(unit.id);
+    // Guard: jika unit tutup, tidak bisa diklik (card sudah disabled, tapi double-guard)
+    if (status?.queue === "closed") return;
 
     setSelectedUnit(unit);
     setModalOpen(true);
@@ -66,7 +99,6 @@ export default function UnitPage() {
 
       if (res.success) {
         setTicketData(res.data);
-        console.log(res.data);
         setModalOpen(false);
         setTicketModal(true);
 
@@ -75,7 +107,9 @@ export default function UnitPage() {
         }, 500);
       }
     } catch (err) {
-      alert(err.response?.data?.error || "Gagal mengambil antrian");
+      alert(
+        err.response?.data?.error || err.message || "Gagal mengambil antrian"
+      );
     } finally {
       setLoadingTake(false);
     }
@@ -89,30 +123,6 @@ export default function UnitPage() {
   };
 
   useEffect(() => {
-    loadUnits();
-
-    const wsProtocol = API_URL.startsWith("https") ? "wss" : "ws";
-    const wsUrl = `${wsProtocol}://${API_URL.replace(
-      /^https?:\/\//,
-      ""
-    )}/ws/units`;
-
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
-
-    ws.onmessage = (event) => {
-      const payload = JSON.parse(event.data);
-      if (payload.type === "units_updated") {
-        loadUnits();
-      }
-      if (payload.type === "status" || payload.type === "config_update") {
-        setQueueStatus(payload);
-      }
-    };
-
-    return () => ws.close();
-  }, [loadUnits]);
-  useEffect(() => {
     const handleAfterPrint = () => {
       if (ticketModal) {
         setTimeout(() => {
@@ -120,13 +130,14 @@ export default function UnitPage() {
         }, 300);
       }
     };
-
     window.addEventListener("afterprint", handleAfterPrint);
-
-    return () => {
-      window.removeEventListener("afterprint", handleAfterPrint);
-    };
+    return () => window.removeEventListener("afterprint", handleAfterPrint);
   }, [ticketModal]);
+
+  // Ambil list unit dari unitsStatus (sudah include semua unit dari WS)
+  // Filter hanya yang is_active = 'y'
+  const activeUnits = unitsStatus.filter((u) => u.is_active === "y");
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -170,50 +181,31 @@ export default function UnitPage() {
             <p className="text-black font-bold text-lg">PILIH LOKET LAYANAN</p>
           </div>
 
-          {queueStatus?.queue === "closed" && (
-            <div className="alert alert-error mb-6 shadow-lg">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="stroke-current shrink-0 h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              <div>
-                <p className="font-bold">{queueStatus.message}</p>
-                <p className="text-sm">
-                  Jam operasional: {queueStatus.jam_buka} -{" "}
-                  {queueStatus.jam_tutup}
-                </p>
-              </div>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2">
-            {units.map((unit, index) => {
-              const isQueueClosed = queueStatus?.queue === "closed";
+            {activeUnits.map((unit, index) => {
+              const isClosed = unit.queue === "closed";
+
+              let closedMessage = "Unit ini sedang tutup";
+              if (isClosed && unit.has_schedule && unit.jam_buka) {
+                closedMessage = `Unit ini sedang tutup • Jam operasional: ${unit.jam_buka.slice(
+                  0,
+                  5
+                )} - ${unit.jam_tutup.slice(0, 5)}`;
+              }
 
               return (
                 <div
                   key={unit.id}
-                  onClick={() => !isQueueClosed && openUnit(unit)}
+                  onClick={() => !isClosed && openUnit(unit)}
                   className={`group ${
-                    isQueueClosed
-                      ? "cursor-not-allowed opacity-50"
-                      : "cursor-pointer"
+                    isClosed ? "cursor-not-allowed" : "cursor-pointer"
                   }`}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div
                     className={`card bg-base-100 border-2 transition-all duration-300 ${
-                      isQueueClosed
-                        ? "border-base-300"
+                      isClosed
+                        ? "border-base-300 opacity-60"
                         : "border-base-300 hover:border-primary hover:shadow-xl hover:-translate-y-1"
                     }`}
                   >
@@ -222,26 +214,32 @@ export default function UnitPage() {
                         <div className="flex-1">
                           <h2
                             className={`card-title text-xl md:text-2xl mb-2 transition-colors ${
-                              isQueueClosed ? "" : "group-hover:text-primary"
+                              isClosed ? "" : "group-hover:text-primary"
                             }`}
                           >
                             {unit.nama_unit}
                           </h2>
-                          <p className="text-sm text-base-content/60">
-                            {isQueueClosed
-                              ? "Antrian belum dibuka"
+                          <p
+                            className={`text-sm ${
+                              isClosed
+                                ? "text-error font-medium"
+                                : "text-base-content/60"
+                            }`}
+                          >
+                            {isClosed
+                              ? closedMessage
                               : "Klik untuk melihat layanan tersedia"}
                           </p>
                         </div>
                         <div className="flex-shrink-0">
                           <div
                             className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                              isQueueClosed
+                              isClosed
                                 ? "bg-base-300"
                                 : "bg-primary/10 group-hover:bg-primary/20"
                             }`}
                           >
-                            {isQueueClosed ? (
+                            {isClosed ? (
                               <svg
                                 xmlns="http://www.w3.org/2000/svg"
                                 fill="none"
@@ -282,7 +280,7 @@ export default function UnitPage() {
             })}
           </div>
 
-          {units.length === 0 && (
+          {activeUnits.length === 0 && !loading && (
             <div className="text-center py-16">
               <div className="inline-block p-8 bg-base-100 rounded-2xl border-2 border-dashed border-base-300">
                 <svg
@@ -311,6 +309,7 @@ export default function UnitPage() {
         </div>
       </div>
 
+      {/* Modal Pilih Layanan — tidak berubah dari versi lama */}
       <dialog className={`modal ${modalOpen ? "modal-open" : ""}`}>
         <div className="modal-box max-w-2xl">
           <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-base-300">
@@ -369,7 +368,6 @@ export default function UnitPage() {
                               : "Tutup"}
                           </span>
                         </div>
-
                         <div className="flex items-center gap-4 text-sm">
                           <div className="flex items-center gap-2 text-base-content/70">
                             <svg
@@ -393,7 +391,6 @@ export default function UnitPage() {
                             </svg>
                             <span>Loket {service.loket}</span>
                           </div>
-
                           {isAvailable ? (
                             <div className="flex items-center gap-2 text-success">
                               <svg
@@ -439,7 +436,6 @@ export default function UnitPage() {
                           )}
                         </div>
                       </div>
-
                       {isAvailable && (
                         <div className="flex-shrink-0">
                           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors">
@@ -503,6 +499,7 @@ export default function UnitPage() {
         </form>
       </dialog>
 
+      {/* Modal Tiket — tidak berubah dari versi lama */}
       <dialog className={`modal ${ticketModal ? "modal-open" : ""}`}>
         <div className="modal-box max-w-md print:shadow-none print:max-w-full print:m-0">
           <div className="text-center space-y-6 print:hidden">
@@ -612,6 +609,7 @@ export default function UnitPage() {
             </div>
           </div>
 
+          {/* Print template — tidak berubah */}
           <div className="hidden print:block ticket-thermal">
             <div className="text-center" style={{ padding: "3mm 4mm" }}>
               <p
@@ -637,7 +635,6 @@ export default function UnitPage() {
               >
                 KABUPATEN PEKALONGAN
               </p>
-
               <div
                 style={{
                   borderTop: "1px dashed #000",
@@ -645,7 +642,6 @@ export default function UnitPage() {
                   width: "100%",
                 }}
               ></div>
-
               <p
                 style={{
                   fontSize: "7pt",
@@ -658,7 +654,6 @@ export default function UnitPage() {
               >
                 NOMOR ANTRIAN
               </p>
-
               <p
                 style={{
                   fontSize: "32pt",
@@ -670,7 +665,6 @@ export default function UnitPage() {
               >
                 {ticketData?.ticket?.ticket_code}
               </p>
-
               <div
                 style={{
                   borderTop: "1px dashed #000",
@@ -678,7 +672,6 @@ export default function UnitPage() {
                   width: "100%",
                 }}
               ></div>
-
               <p
                 style={{
                   fontSize: "7pt",
@@ -711,7 +704,6 @@ export default function UnitPage() {
               >
                 ({ticketData?.service_name})
               </p>
-
               <p
                 style={{
                   fontSize: "6.5pt",
@@ -723,7 +715,6 @@ export default function UnitPage() {
               >
                 Harap menunggu panggilan
               </p>
-
               <p style={{ fontSize: "8pt", color: "#000", lineHeight: "1.2" }}>
                 Dicetak:{" "}
                 {ticketData?.ticket?.created_at &&
@@ -754,56 +745,19 @@ export default function UnitPage() {
 
       <style>{`
         @media print {
-          @page {
-            size: 80mm auto;
-            max-height: 100mm;
-            margin: 0;
-          }
-          
-          * {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          
-          html, body {
-            margin: 0;
-            padding: 0;
-            height: auto;
-          }
-          
-          body * {
-            visibility: hidden;
-            overflow: hidden;
-          }
-          
-          .modal-box,
-          .modal-box * {
-            visibility: visible;
-          }
-          
+          @page { size: 80mm auto; max-height: 100mm; margin: 0; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          html, body { margin: 0; padding: 0; height: auto; }
+          body * { visibility: hidden; overflow: hidden; }
+          .modal-box, .modal-box * { visibility: visible; }
           .modal-box {
-            position: fixed !important;
-            left: 0;
-            top: 0;
-            width: 80mm;
-            height: auto;
-            max-width: 80mm;
-            max-height: 100mm;
-            box-shadow: none;
-            margin: 0;
-            padding: 0;
-            background: white;
-            overflow: visible;
+            position: fixed !important; left: 0; top: 0;
+            width: 80mm; height: auto; max-width: 80mm; max-height: 100mm;
+            box-shadow: none; margin: 0; padding: 0; background: white; overflow: visible;
           }
-          
           .ticket-thermal {
-            width: 80mm;
-            height: auto;
-            max-height: 100mm;
-            font-family: 'Courier New', monospace;
-            color: #000;
-            overflow: visible;
-            box-sizing: border-box;
+            width: 80mm; height: auto; max-height: 100mm;
+            font-family: 'Courier New', monospace; color: #000; overflow: visible; box-sizing: border-box;
           }
         }
       `}</style>

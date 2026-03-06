@@ -6,6 +6,7 @@ services:
       - VIRTUAL_HOST=sandigi.lotusaja.com
       - LETSENCRYPT_HOST=sandigi.lotusaja.com
       - LETSENCRYPT_EMAIL=info.lotusaja@gmail.com
+      - TZ=Asia/Jakarta
     expose:
       - "80"
     networks:
