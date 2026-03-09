@@ -5,7 +5,6 @@ import logo from "../assets/images/logo.webp";
 const API_URL = import.meta.env.VITE_API_URL;
 
 export default function UnitPage() {
-  // unitsStatus: array dari WS — { id, nama_unit, queue, jam_buka, jam_tutup, has_schedule, ... }
   const [unitsStatus, setUnitsStatus] = useState([]);
   const [services, setServices] = useState([]);
   const [selectedUnit, setSelectedUnit] = useState(null);
@@ -17,7 +16,6 @@ export default function UnitPage() {
   const [error, setError] = useState(null);
   const wsRef = useRef(null);
 
-  // Koneksi WebSocket — terima broadcast semua unit sekaligus
   useEffect(() => {
     const wsProtocol = API_URL.startsWith("https") ? "wss" : "ws";
     const wsUrl = `${wsProtocol}://${API_URL.replace(
@@ -37,7 +35,6 @@ export default function UnitPage() {
       ws.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
-          // Payload baru: { type: "units_status", units: [...] }
           if (payload.type === "units_status" && Array.isArray(payload.units)) {
             setUnitsStatus(payload.units);
             setLoading(false);
@@ -53,7 +50,6 @@ export default function UnitPage() {
       };
 
       ws.onclose = () => {
-        // Reconnect setelah 3 detik jika putus
         setTimeout(connect, 3000);
       };
     };
@@ -72,7 +68,6 @@ export default function UnitPage() {
 
   const openUnit = async (unit) => {
     const status = getUnitStatus(unit.id);
-    // Guard: jika unit tutup, tidak bisa diklik (card sudah disabled, tapi double-guard)
     if (status?.queue === "closed") return;
 
     setSelectedUnit(unit);
@@ -134,8 +129,6 @@ export default function UnitPage() {
     return () => window.removeEventListener("afterprint", handleAfterPrint);
   }, [ticketModal]);
 
-  // Ambil list unit dari unitsStatus (sudah include semua unit dari WS)
-  // Filter hanya yang is_active = 'y'
   const activeUnits = unitsStatus.filter((u) => u.is_active === "y");
 
   if (loading) {
@@ -186,7 +179,7 @@ export default function UnitPage() {
               const isClosed = unit.queue === "closed";
 
               let closedMessage = "Unit ini sedang tutup";
-              if (isClosed && unit.has_schedule && unit.jam_buka) {
+              if (isClosed && unit.is_active_day && unit.jam_buka) {
                 closedMessage = `Unit ini sedang tutup • Jam operasional: ${unit.jam_buka.slice(
                   0,
                   5
@@ -309,7 +302,6 @@ export default function UnitPage() {
         </div>
       </div>
 
-      {/* Modal Pilih Layanan — tidak berubah dari versi lama */}
       <dialog className={`modal ${modalOpen ? "modal-open" : ""}`}>
         <div className="modal-box max-w-2xl">
           <div className="flex items-center justify-between mb-6 pb-4 border-b-2 border-base-300">
@@ -609,7 +601,6 @@ export default function UnitPage() {
             </div>
           </div>
 
-          {/* Print template — tidak berubah */}
           <div className="hidden print:block ticket-thermal">
             <div className="text-center" style={{ padding: "3mm 4mm" }}>
               <p
